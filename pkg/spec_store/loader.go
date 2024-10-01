@@ -2,8 +2,10 @@ package spec_store
 
 import (
 	"bytes"
-	"log"
+	"os"
+	"path/filepath"
 
+	"github.com/charmbracelet/log"
 	"github.com/thisisibrahimd/openslo/pkg/openslo"
 	v1 "github.com/thisisibrahimd/openslo/pkg/openslo/v1"
 	"github.com/thisisibrahimd/openslo/pkg/openslosdk"
@@ -34,32 +36,62 @@ func NewSpecStore(filenames []string, recursive bool) *SpecStore {
 	}
 }
 
-func (s *SpecStore) getSpecs() ([]openslo.Object, error) {
-	files, err := util.LoadFiles(s.filenames, s.recursive)
+func (s *SpecStore) readSpecs() ([]openslo.Object, error) {
+	// remove loaded specs
+	s.clearStore()
+
+	// read files and dirs
+	log.Info("finding files")
+	filenames, err := util.FindFiles(s.filenames, s.recursive)
 	if err != nil {
-		return nil, err
+		log.Error("unable to read files in filenames provided", "err", err)
 	}
 
-	// decode files
+	// read files
+	log.Info("reading and decoding files")
 	var opensloObjects []openslo.Object
-	for _, file := range files {
+	for _, filename := range filenames {
+		log.Info("reading file", "file", filename)
+		file, err := os.ReadFile(filepath.Clean(filename))
+		if err != nil {
+			log.Error("unable to read file", "file", file)
+			continue
+		}
+
 		decoder := bytes.NewBuffer(file)
 		objects, err := openslosdk.Decode(decoder, openslosdk.FormatYAML)
 		if err != nil {
-			return nil, err
+			log.Error("unable to decode file to openslo spec. skipping", "file", filename)
+			continue
 		}
+
+		log.Debug("successfully loaded file", "file", filename)
 		opensloObjects = append(opensloObjects, objects...)
 	}
 
+	log.Info("finished reading and decoding files", "amount", len(filenames))
 	return opensloObjects, nil
 }
 
+func (s *SpecStore) clearStore() {
+	s.Store.V1.Services = []v1.Service{}
+	s.Store.V1.SLOs = []v1.SLO{}
+	s.Store.V1.SLIs = []v1.SLI{}
+	s.Store.V1.DataSources = []v1.DataSource{}
+	s.Store.V1.AlertPolicy = []v1.AlertPolicy{}
+	s.Store.V1.AlertConditions = []v1.AlertCondition{}
+	s.Store.V1.AlertNotificationTargets = []v1.AlertNotificationTarget{}
+	s.Store.V1.BudgetAdjustments = []v1.BudgetAdjustment{}
+
+}
+
 func (s *SpecStore) LoadSpecs() {
-	opensloObjects, err := s.getSpecs()
+	log.Info("organizing and storing specs")
+
+	opensloObjects, err := s.readSpecs()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("unable to read specs", "err", err)
 	}
-	log.Println("organizing and storing specs")
 
 	for _, spec := range opensloObjects {
 		switch version := spec.GetVersion(); version {
