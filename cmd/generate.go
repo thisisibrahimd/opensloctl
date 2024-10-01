@@ -27,7 +27,7 @@ var generateCmd = &cobra.Command{
 		pg := prometheusgenerator.NewPrometheusGenerator(specStore)
 		err := pg.Generate(outputDirectory)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("unable to generate files", "err", err)
 		}
 
 	},
@@ -38,6 +38,6 @@ func init() {
 
 	generateCmd.Flags().StringArrayVarP(&filenames, "filename", "f", []string{}, "The files that contain the openslo specs to load.")
 	generateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Whether to recursively look into the directory.")
-	generateCmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", ".", "directory to write to")
+	generateCmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", "", "directory to write to")
 	// generateCmd.Flags().StringVarP(&generator, "generator", "g", "", "select the generator you would like to use")
 }

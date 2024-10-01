@@ -56,7 +56,7 @@ groups:
     {{- end }}
     {{- if .IsMulti }}
     {{- range .WindowedPrometheusQueries }}
-    - record: openslo_sli.error_rate{{ .Window }}
+    - record: openslo_sli_error_rate{{ .Window }}
       expr: label_join(openslo_sli_error_rate{{ .Window }}_unlabeled{openslo_slo_name="{{ $.SloName }}", openslo_spec_version="{{ $.OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
       labels:
         openslo_slo_name: {{ $.SloName }}

@@ -1,8 +1,13 @@
 package generator
 
 type GeneratedFile struct {
-	Name string
-	Data []byte
+	Path string
+	Data string
+}
+
+func (f *GeneratedFile) Bytes() []byte {
+	return []byte(f.Data)
+
 }
 
 type Generator interface {
