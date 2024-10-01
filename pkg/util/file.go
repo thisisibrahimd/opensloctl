@@ -43,8 +43,11 @@ func FindFiles(filenames []string, recursive bool) ([]string, error) {
 					return err
 				}
 				if !d.IsDir() {
-					log.Info("found file", "filename", path)
-					filesFound = append(filesFound, path)
+					extension := filepath.Ext(path)
+					if extension == "yaml" || extension == "yml" {
+						log.Info("found file", "filename", path)
+						filesFound = append(filesFound, path)
+					}
 				}
 				return nil
 			}); walkErr != nil {
@@ -63,8 +66,11 @@ func FindFiles(filenames []string, recursive bool) ([]string, error) {
 
 			for _, file := range files {
 				if !file.IsDir() {
-					log.Info("found file", "filename", path.Join(filename, file.Name()))
-					filesFound = append(filesFound, path.Join(filename, file.Name()))
+					extension := filepath.Ext(file.Name())
+					if extension == "yaml" || extension == "yml" {
+						log.Info("found file", "filename", path.Join(filename, file.Name()))
+						filesFound = append(filesFound, path.Join(filename, file.Name()))
+					}
 				}
 			}
 			continue
