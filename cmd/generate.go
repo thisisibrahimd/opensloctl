@@ -24,9 +24,6 @@ var generateCmd = &cobra.Command{
 		specStore := spec_store.NewSpecStore(filenames, recursive)
 		specStore.LoadSpecs()
 
-		// Done reading all specs
-		log.Info("loaded all specs", "num-of-openslo objects", len(specStore.Store.V1.SLOs))
-
 		pg := prometheusgenerator.NewPrometheusGenerator(specStore)
 		err := pg.Generate(outputDirectory)
 		if err != nil {

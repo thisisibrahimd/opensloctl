@@ -69,7 +69,7 @@ func (s *SpecStore) readSpecs() ([]openslo.Object, error) {
 		opensloObjects = append(opensloObjects, objects...)
 	}
 
-	log.Info("finished reading and decoding files", "amount", len(filenames))
+	log.Info("finished reading and decoding files into openslo specs", "amount", len(opensloObjects))
 	return opensloObjects, nil
 }
 
