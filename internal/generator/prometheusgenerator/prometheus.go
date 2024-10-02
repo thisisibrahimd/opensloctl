@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"text/template"
 
@@ -23,6 +24,8 @@ const (
 
 var (
 	DEFAULT_FILE_MODE = ""
+	numberRegex       = regexp.MustCompile("[0-9]+")
+	daysRegex         = regexp.MustCompile("([0-9]+)d")
 )
 
 type PrometheusGenerator struct {
@@ -38,7 +41,7 @@ func NewPrometheusGenerator(specStore *spec_store.SpecStore) generator.Generator
 
 func (g *PrometheusGenerator) Generate(outputDirectory string) error {
 	if outputDirectory == "" {
-		return errors.New("out put directory can not be empty")
+		return errors.New("output directory can not be empty")
 	}
 
 	log.Info("generating files")
@@ -104,6 +107,9 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			windowedPromQueries = append(windowedPromQueries, windowedPromQuery)
 		}
 
+		// extract days in time window
+		numberOfDays := numberRegex.FindString(slo.Spec.TimeWindow[0].Duration)
+
 		// template out prom rules
 		tpldData := templates.TemplateData{
 			SloName:                   slo.Metadata.Name,
@@ -113,7 +119,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			Objective:                 strconv.FormatFloat(slo.Spec.Objectives[0].Target, 'f', -1, 32),
 			IsMulti:                   multiFeatureEnabled,
 			MultiDimensionalLabel:     multiDimSliLabel,
-			TimeWindowDays:            "30d",
+			TimeWindowDays:            numberOfDays,
 		}
 
 		prometheusTemplate := template.Must(template.New("prometheus-recording-rules").Funcs(sprig.FuncMap()).Parse(templates.PrometheusRecordingRuleTemplate))
