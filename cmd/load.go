@@ -22,8 +22,6 @@ var loadCmd = &cobra.Command{
 		specStore := spec_store.NewSpecStore(filenames, recursive)
 		specStore.LoadSpecs()
 
-		// Done reading all specs
-		log.Info("loaded all specs", "num-of-openslo objects", len(specStore.Store.V1.SLOs))
 	},
 }
 

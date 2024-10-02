@@ -1,7 +1,7 @@
 package util
 
 import (
-	"fmt"
+	"errors"
 	"io/fs"
 	"os"
 	"path"
@@ -12,39 +12,41 @@ import (
 )
 
 func FindFiles(filenames []string, recursive bool) ([]string, error) {
-	var filesFound []string
-
 	// ensure a file name is provided
 	if len(filenames) < 1 {
-		return nil, fmt.Errorf("at least one filename must be provided")
+		return nil, errors.New("at least one filename must be provided")
 	}
 
+	// go through provided filenames
+	var filesFound []string
 	for _, filename := range filenames {
-		// Ensure we access the file or dir
+		// ensure we can access the file or dir
 		fileInfo, err := os.Stat(filename)
 		if err != nil {
-			log.Fatal("unable to read file", "file", filename, "err", err)
 			return nil, err
 		}
 
-		// Filename is a FILE
+		// filename provided is a file
 		if !fileInfo.IsDir() {
-			log.Info("file was provided", "file", filename)
+			log.Info("found file", "file", filename)
 			filesFound = append(filesFound, filename)
 			continue
 		}
 
-		// Filename is a DIRECTORY
-		log.Info("directory was provided", "dir", filename)
+		// filename providedis a directory
+		log.Info("found directory", "dir", filename)
 		if recursive {
-			log.Info("will read directory recursively", "dir", filename)
+			log.Info("recursvinly finding files in directory", "dir", filename)
 			if walkErr := filepath.WalkDir(filename, func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
 					return err
 				}
 				if !d.IsDir() {
-					log.Info("found file", "filename", path)
-					filesFound = append(filesFound, path)
+					extension := filepath.Ext(path)
+					if extension == ".yaml" || extension == ".yml" {
+						log.Info("found file", "filename", path)
+						filesFound = append(filesFound, path)
+					}
 				}
 				return nil
 			}); walkErr != nil {
@@ -63,8 +65,11 @@ func FindFiles(filenames []string, recursive bool) ([]string, error) {
 
 			for _, file := range files {
 				if !file.IsDir() {
-					log.Info("found file", "filename", path.Join(filename, file.Name()))
-					filesFound = append(filesFound, path.Join(filename, file.Name()))
+					extension := filepath.Ext(file.Name())
+					if extension == ".yaml" || extension == ".yml" {
+						log.Info("found file", "filename", path.Join(filename, file.Name()))
+						filesFound = append(filesFound, path.Join(filename, file.Name()))
+					}
 				}
 			}
 			continue
@@ -76,34 +81,5 @@ func FindFiles(filenames []string, recursive bool) ([]string, error) {
 	filesFound = slices.Compact(filesFound)
 
 	log.Info("successfully found files", "number", len(filesFound))
-
 	return filesFound, nil
-}
-
-func LoadFiles(filenames []string, recursive bool) ([][]byte, error) {
-	var files [][]byte
-
-	log.Info("starting to load files", "number_of_files_to_load", len(filenames))
-
-	filesToLoad, err := FindFiles(filenames, recursive)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, fileToLoad := range filesToLoad {
-		log.Info("loading file", "file", fileToLoad)
-
-		file, err := os.ReadFile(filepath.Clean(fileToLoad))
-		if err != nil {
-			log.Error("unable to read file", "file", fileToLoad)
-			return nil, err
-		}
-
-		files = append(files, file)
-		log.Info("successfully loaded file", "file", fileToLoad)
-	}
-
-	log.Info("successfully loaded files", "number", len(files))
-
-	return files, nil
 }
