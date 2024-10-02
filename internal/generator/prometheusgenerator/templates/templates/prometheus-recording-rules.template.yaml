@@ -1,7 +1,7 @@
 {{- define "slo_name"}}{{.SloName}}{{end}}
 {{- define "openslo_version"}}{{.OpensloVersion}}{{end}}
 groups:
-  - name: openslo_info_recordings_{{ .SloName }}
+  - name: openslo-info-recordings-{{ .SloName }}
     rules:
     - record: openslo_slo_info{{ if $.IsMulti }}_unlabled{{end}}
       expr: vector(1)
@@ -48,7 +48,7 @@ groups:
   - name: openslo-sli-recordings-{{ .SloName }}
     rules:
     {{- range .WindowedPrometheusQueries }}
-    - record: openslo_sli_error_rate{{ .Window }}{{ if $.IsMulti }}_unlabled{{end}}
+    - record: openslo_sli_error_rate{{ .Window }}{{ if $.IsMulti }}_unlabeled{{end}}
       expr: {{ .Query }}
       labels:
         openslo_slo_name: {{ $.SloName }}
