@@ -15,7 +15,7 @@ import (
 	"github.com/thisisibrahimd/opensloctl/internal/feature"
 	"github.com/thisisibrahimd/opensloctl/internal/generator"
 	"github.com/thisisibrahimd/opensloctl/internal/generator/prometheusgenerator/templates"
-	"github.com/thisisibrahimd/opensloctl/pkg/spec_store"
+	"github.com/thisisibrahimd/opensloctl/pkg/specstore"
 )
 
 const (
@@ -29,10 +29,10 @@ var (
 )
 
 type PrometheusGenerator struct {
-	specStore *spec_store.SpecStore
+	specStore *specstore.SpecStore
 }
 
-func NewPrometheusGenerator(specStore *spec_store.SpecStore) generator.Generator {
+func NewPrometheusGenerator(specStore *specstore.SpecStore) generator.Generator {
 	return &PrometheusGenerator{
 		specStore: specStore,
 	}
