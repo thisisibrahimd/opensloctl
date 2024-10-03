@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/thisisibrahimd/opensloctl/internal/generator/prometheusgenerator"
-	"github.com/thisisibrahimd/opensloctl/pkg/spec_store"
+	"github.com/thisisibrahimd/opensloctl/pkg/specstore"
 )
 
 var (
@@ -21,7 +21,7 @@ var generateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("generate called")
 
-		specStore := spec_store.NewSpecStore(filenames, recursive)
+		specStore := specstore.NewSpecStore(filenames, recursive)
 		specStore.LoadSpecs()
 
 		pg := prometheusgenerator.NewPrometheusGenerator(specStore)

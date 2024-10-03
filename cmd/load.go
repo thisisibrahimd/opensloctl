@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/thisisibrahimd/opensloctl/pkg/spec_store"
+	"github.com/thisisibrahimd/opensloctl/pkg/specstore"
 )
 
 var (
@@ -19,7 +19,7 @@ var loadCmd = &cobra.Command{
 		log.Info("reading files/dirs", "number", len(filenames))
 
 		// Read and load specs
-		specStore := spec_store.NewSpecStore(filenames, recursive)
+		specStore := specstore.NewSpecStore(filenames, recursive)
 		specStore.LoadSpecs()
 
 	},

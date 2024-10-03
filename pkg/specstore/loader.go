@@ -1,4 +1,4 @@
-package spec_store
+package specstore
 
 import (
 	"bytes"
