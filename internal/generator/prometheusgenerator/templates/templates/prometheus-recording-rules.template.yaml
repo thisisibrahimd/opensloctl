@@ -27,22 +27,18 @@ groups:
     - record: openslo_slo_info
       expr: label_join(openslo_slo_info_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
       labels:
-        openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
     - record: openslo_slo_objective
       expr: label_join(openslo_slo_objective_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
       labels:
-        openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
     - record: openslo_slo_timewindow_days
       expr: label_join(openslo_slo_timewindow_days_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
       labels:
-        openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
     - record: openslo_slo_error_budget
       expr: label_join(openslo_slo_error_budget_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
       labels:
-        openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
     {{- end}}
   - name: openslo-sli-recordings-{{ .SloName }}
@@ -59,7 +55,6 @@ groups:
     - record: openslo_sli_error_rate{{ .Window }}
       expr: label_join(openslo_sli_error_rate{{ .Window }}_unlabeled{openslo_slo_name="{{ $.SloName }}", openslo_spec_version="{{ $.OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
       labels:
-        openslo_slo_name: {{ $.SloName }}
         openslo_spec_version: {{ $.OpensloVersion }}
     {{- end }}
     {{- end }}
