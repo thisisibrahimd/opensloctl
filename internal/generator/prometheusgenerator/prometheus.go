@@ -25,16 +25,16 @@ const (
 var (
 	DEFAULT_FILE_MODE = ""
 	numberRegex       = regexp.MustCompile("[0-9]+")
-	daysRegex         = regexp.MustCompile("([0-9]+)d")
+	// daysRegex         = regexp.MustCompile("([0-9]+)d")
 )
 
 type PrometheusGenerator struct {
-	specStore *specstore.SpecStore
+	specs *specstore.OpenSloSpecs
 }
 
-func NewPrometheusGenerator(specStore *specstore.SpecStore) generator.Generator {
+func NewPrometheusGenerator(specs *specstore.OpenSloSpecs) generator.Generator {
 	return &PrometheusGenerator{
-		specStore: specStore,
+		specs: specs,
 	}
 
 }
@@ -65,7 +65,7 @@ func (g *PrometheusGenerator) Generate(outputDirectory string) error {
 func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile, error) {
 	var generatedPrometheusRuleFiles []*generator.GeneratedFile
 	// loop through slos
-	for _, slo := range g.specStore.Store.V1.SLOs {
+	for _, slo := range g.specs.V1.SLOs {
 		log.Info("generating prometheus recording rule", "slo", slo.Metadata.Name)
 
 		// TODO: support indicator ref

@@ -5,6 +5,7 @@ go 1.22.5
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/charmbracelet/log v0.4.0
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.1
 	github.com/thisisibrahimd/openslo v1.0.1-alpha5
 )
@@ -27,7 +28,6 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
