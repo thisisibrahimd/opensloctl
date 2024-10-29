@@ -12,39 +12,68 @@ import (
 	"github.com/thisisibrahimd/opensloctl/pkg/util"
 )
 
+type OpenSloSpecs struct {
+	V1 struct {
+		Services                 []v1.Service
+		SLOs                     []v1.SLO
+		SLIs                     []v1.SLI
+		DataSources              []v1.DataSource
+		AlertPolicy              []v1.AlertPolicy
+		AlertConditions          []v1.AlertCondition
+		AlertNotificationTargets []v1.AlertNotificationTarget
+		BudgetAdjustments        []v1.BudgetAdjustment
+	}
+}
+
 type SpecStore struct {
 	filenames []string
 	recursive bool
-	Store     struct {
-		V1 struct {
-			Services                 []v1.Service
-			SLOs                     []v1.SLO
-			SLIs                     []v1.SLI
-			DataSources              []v1.DataSource
-			AlertPolicy              []v1.AlertPolicy
-			AlertConditions          []v1.AlertCondition
-			AlertNotificationTargets []v1.AlertNotificationTarget
-			BudgetAdjustments        []v1.BudgetAdjustment
-		}
+}
+
+type SpecStoreOption func(*SpecStore)
+
+func WithFilenames(filenames []string) SpecStoreOption {
+	return func(ss *SpecStore) {
+		ss.filenames = filenames
 	}
 }
 
-func NewSpecStore(filenames []string, recursive bool) *SpecStore {
-	return &SpecStore{
-		filenames: filenames,
-		recursive: recursive,
+func WithRecursive(recursive bool) SpecStoreOption {
+	return func(ss *SpecStore) {
+		ss.recursive = recursive
 	}
 }
 
-func (s *SpecStore) readSpecs() ([]openslo.Object, error) {
-	// remove loaded specs
-	s.clearStore()
+func NewSpecStore(options ...SpecStoreOption) *SpecStore {
+	specStore := &SpecStore{
+		filenames: []string{},
+		recursive: false,
+	}
 
-	// read files and dirs
-	log.Info("finding files")
+	for _, opt := range options {
+		opt(specStore)
+	}
+
+	return specStore
+}
+
+func (s *SpecStore) GetSpecs() (*OpenSloSpecs, error) {
+	openSloObjects, err := s.loadSpecs()
+	if err != nil {
+		return nil, err
+	}
+
+	sortedOpenSloSpecs := s.sortSpecs(openSloObjects)
+
+	return sortedOpenSloSpecs, nil
+}
+
+func (s *SpecStore) loadSpecs() ([]openslo.Object, error) {
+	log.Info("loading specs")
 	filenames, err := util.FindFiles(s.filenames, s.recursive)
 	if err != nil {
 		log.Error("unable to read files in filenames provided", "err", err)
+		return nil, err
 	}
 
 	// read files
@@ -73,47 +102,33 @@ func (s *SpecStore) readSpecs() ([]openslo.Object, error) {
 	return opensloObjects, nil
 }
 
-func (s *SpecStore) clearStore() {
-	s.Store.V1.Services = []v1.Service{}
-	s.Store.V1.SLOs = []v1.SLO{}
-	s.Store.V1.SLIs = []v1.SLI{}
-	s.Store.V1.DataSources = []v1.DataSource{}
-	s.Store.V1.AlertPolicy = []v1.AlertPolicy{}
-	s.Store.V1.AlertConditions = []v1.AlertCondition{}
-	s.Store.V1.AlertNotificationTargets = []v1.AlertNotificationTarget{}
-	s.Store.V1.BudgetAdjustments = []v1.BudgetAdjustment{}
+func (s *SpecStore) sortSpecs(openSloObjects []openslo.Object) *OpenSloSpecs {
+	log.Info("sorting specs")
+	specs := &OpenSloSpecs{}
 
-}
-
-func (s *SpecStore) LoadSpecs() {
-	log.Info("organizing and storing specs")
-
-	opensloObjects, err := s.readSpecs()
-	if err != nil {
-		log.Fatal("unable to read specs", "err", err)
-	}
-
-	for _, spec := range opensloObjects {
+	for _, spec := range openSloObjects {
 		switch version := spec.GetVersion(); version {
 		case openslo.VersionV1:
 			switch kind := spec.GetKind(); kind {
 			case openslo.KindService:
-				s.Store.V1.Services = append(s.Store.V1.Services, spec.(v1.Service))
+				specs.V1.Services = append(specs.V1.Services, spec.(v1.Service))
 			case openslo.KindSLO:
-				s.Store.V1.SLOs = append(s.Store.V1.SLOs, spec.(v1.SLO))
+				specs.V1.SLOs = append(specs.V1.SLOs, spec.(v1.SLO))
 			case openslo.KindSLI:
-				s.Store.V1.SLIs = append(s.Store.V1.SLIs, spec.(v1.SLI))
+				specs.V1.SLIs = append(specs.V1.SLIs, spec.(v1.SLI))
 			case openslo.KindDataSource:
-				s.Store.V1.DataSources = append(s.Store.V1.DataSources, spec.(v1.DataSource))
+				specs.V1.DataSources = append(specs.V1.DataSources, spec.(v1.DataSource))
 			case openslo.KindAlertPolicy:
-				s.Store.V1.AlertPolicy = append(s.Store.V1.AlertPolicy, spec.(v1.AlertPolicy))
+				specs.V1.AlertPolicy = append(specs.V1.AlertPolicy, spec.(v1.AlertPolicy))
 			case openslo.KindAlertCondition:
-				s.Store.V1.AlertConditions = append(s.Store.V1.AlertConditions, spec.(v1.AlertCondition))
+				specs.V1.AlertConditions = append(specs.V1.AlertConditions, spec.(v1.AlertCondition))
 			case openslo.KindAlertNotificationTarget:
-				s.Store.V1.AlertNotificationTargets = append(s.Store.V1.AlertNotificationTargets, spec.(v1.AlertNotificationTarget))
+				specs.V1.AlertNotificationTargets = append(specs.V1.AlertNotificationTargets, spec.(v1.AlertNotificationTarget))
 			case openslo.KindBudgetAdjustment:
-				s.Store.V1.BudgetAdjustments = append(s.Store.V1.BudgetAdjustments, spec.(v1.BudgetAdjustment))
+				specs.V1.BudgetAdjustments = append(specs.V1.BudgetAdjustments, spec.(v1.BudgetAdjustment))
 			}
 		}
 	}
+
+	return specs
 }
