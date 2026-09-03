@@ -29,10 +29,10 @@ var (
 )
 
 type PrometheusGenerator struct {
-	specs *specstore.OpenSloSpecs
+	specs *specstore.OpenSLOSpecs
 }
 
-func NewPrometheusGenerator(specs *specstore.OpenSloSpecs) generator.Generator {
+func NewPrometheusGenerator(specs *specstore.OpenSLOSpecs) generator.Generator {
 	return &PrometheusGenerator{
 		specs: specs,
 	}

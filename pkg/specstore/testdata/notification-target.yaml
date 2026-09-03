@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: AlertNotificationTarget
+metadata:
+  name: test-notification-target
+spec:
+  description: Test notification target
+  target: pagerduty

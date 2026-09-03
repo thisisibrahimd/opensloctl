@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: SLI
+metadata:
+  name: test-sli
+spec:
+  description: Test SLI
+  thresholdMetric:
+    metricSource:
+      type: Prometheus
+      spec:
+        query: "up"

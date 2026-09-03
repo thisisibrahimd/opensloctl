@@ -1,0 +1,23 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: test-slo
+spec:
+  description: Test SLO
+  service: test-service
+  indicator:
+    metadata:
+      name: test-sli-inline
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: Prometheus
+          spec:
+            query: "up"
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "99.9% availability"
+      target: 0.999

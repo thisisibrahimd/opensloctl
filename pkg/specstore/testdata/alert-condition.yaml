@@ -1,0 +1,12 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: test-alert-condition
+spec:
+  severity: page
+  description: Test alert condition
+  condition:
+    kind: burnrate
+    op: lte
+    threshold: 2.0
+    lookbackWindow: 1h

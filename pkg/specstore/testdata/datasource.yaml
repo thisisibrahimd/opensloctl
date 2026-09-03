@@ -1,0 +1,8 @@
+apiVersion: openslo/v1
+kind: DataSource
+metadata:
+  name: test-datasource
+spec:
+  type: Prometheus
+  connectionDetails:
+    url: http://prometheus:9090

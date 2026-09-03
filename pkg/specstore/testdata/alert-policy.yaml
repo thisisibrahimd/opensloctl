@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: test-alert-policy
+spec:
+  description: Test alert policy
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: test-alert-condition
+  notificationTargets:
+    - targetRef: test-notification-target
