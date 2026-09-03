@@ -1,0 +1,24 @@
+text_maps:
+  go_types:
+    int: int64
+    double: float64
+    string: string
+    boolean: bool
+
+comment_formats:
+  go:
+    format: markdown
+    prefix: "// "
+
+params:
+  package_name: semconv
+
+templates:
+  - template: semconv.go.j2
+    filter: >
+      {
+        "attributes": semconv_grouped_attributes({"v2": true}),
+        "metrics": semconv_grouped_metrics({"v2": true})
+      }
+    application_mode: single
+    file_name: "semconv_gen.go"
