@@ -2,13 +2,13 @@ package specstore
 
 import (
 	"bytes"
+	"log/slog"
 	"os"
 	"path/filepath"
 
-	"github.com/charmbracelet/log"
-	"github.com/thisisibrahimd/openslo/pkg/openslo"
-	v1 "github.com/thisisibrahimd/openslo/pkg/openslo/v1"
-	"github.com/thisisibrahimd/openslo/pkg/openslosdk"
+	"github.com/OpenSLO/go-sdk/pkg/openslo"
+	v1 "github.com/OpenSLO/go-sdk/pkg/openslo/v1"
+	"github.com/OpenSLO/go-sdk/pkg/openslosdk"
 	"github.com/thisisibrahimd/opensloctl/pkg/util"
 )
 
@@ -21,7 +21,6 @@ type OpenSloSpecs struct {
 		AlertPolicy              []v1.AlertPolicy
 		AlertConditions          []v1.AlertCondition
 		AlertNotificationTargets []v1.AlertNotificationTarget
-		BudgetAdjustments        []v1.BudgetAdjustment
 	}
 }
 
@@ -69,41 +68,40 @@ func (s *SpecStore) GetSpecs() (*OpenSloSpecs, error) {
 }
 
 func (s *SpecStore) loadSpecs() ([]openslo.Object, error) {
-	log.Info("loading specs")
+	slog.Info("loading specs")
 	filenames, err := util.FindFiles(s.filenames, s.recursive)
 	if err != nil {
-		log.Error("unable to read files in filenames provided", "err", err)
+		slog.Error("unable to read files in filenames provided", "err", err)
 		return nil, err
 	}
 
 	// read files
-	log.Info("reading and decoding files")
+	slog.Info("reading and decoding files")
 	var opensloObjects []openslo.Object
 	for _, filename := range filenames {
-		log.Info("reading file", "file", filename)
+		slog.Info("reading file", "file", filename)
 		file, err := os.ReadFile(filepath.Clean(filename))
 		if err != nil {
-			log.Error("unable to read file", "file", file)
+			slog.Error("unable to read file", "file", filename, "err", err)
 			continue
 		}
 
 		decoder := bytes.NewBuffer(file)
 		objects, err := openslosdk.Decode(decoder, openslosdk.FormatYAML)
 		if err != nil {
-			log.Error("unable to decode file to openslo spec. skipping", "file", filename)
+			slog.Info("unable to decode file to openslo spec, skipping", "file", filename)
 			continue
 		}
 
-		log.Debug("successfully loaded file", "file", filename)
+		slog.Debug("successfully loaded file", "file", filename)
 		opensloObjects = append(opensloObjects, objects...)
 	}
 
-	log.Info("finished reading and decoding files into openslo specs", "amount", len(opensloObjects))
+	slog.Info("finished reading and decoding files into openslo specs", "amount", len(opensloObjects))
 	return opensloObjects, nil
 }
 
 func (s *SpecStore) sortSpecs(openSloObjects []openslo.Object) *OpenSloSpecs {
-	log.Info("sorting specs")
 	specs := &OpenSloSpecs{}
 
 	for _, spec := range openSloObjects {
@@ -124,8 +122,6 @@ func (s *SpecStore) sortSpecs(openSloObjects []openslo.Object) *OpenSloSpecs {
 				specs.V1.AlertConditions = append(specs.V1.AlertConditions, spec.(v1.AlertCondition))
 			case openslo.KindAlertNotificationTarget:
 				specs.V1.AlertNotificationTargets = append(specs.V1.AlertNotificationTargets, spec.(v1.AlertNotificationTarget))
-			case openslo.KindBudgetAdjustment:
-				specs.V1.BudgetAdjustments = append(specs.V1.BudgetAdjustments, spec.(v1.BudgetAdjustment))
 			}
 		}
 	}

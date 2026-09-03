@@ -1,7 +1,9 @@
 package cmd
 
 import (
-	"github.com/charmbracelet/log"
+	"log/slog"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/thisisibrahimd/opensloctl/internal/generator/prometheusgenerator"
 	"github.com/thisisibrahimd/opensloctl/pkg/specstore"
@@ -32,17 +34,19 @@ func newGenerateCommand() *cobra.Command {
 }
 
 func runGenerate(cmd *cobra.Command, args []string, flags generateFlags) {
-	log.Info("running generate command")
+	slog.Info("running generate command")
 
 	specStore := specstore.NewSpecStore(specstore.WithFilenames(flags.filenames), specstore.WithRecursive(flags.recursive))
 	specs, err := specStore.GetSpecs()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(1)
 	}
 
 	pg := prometheusgenerator.NewPrometheusGenerator(specs)
 	err = pg.Generate(flags.outputDirectory)
 	if err != nil {
-		log.Fatal("unable to generate files", "err", err)
+		slog.Error("unable to generate files", "err", err)
+		os.Exit(1)
 	}
 }

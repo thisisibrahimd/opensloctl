@@ -3,6 +3,7 @@ package prometheusgenerator
 import (
 	"bytes"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"regexp"
@@ -10,7 +11,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/charmbracelet/log"
 	"github.com/pkg/errors"
 	"github.com/thisisibrahimd/opensloctl/internal/feature"
 	"github.com/thisisibrahimd/opensloctl/internal/generator"
@@ -44,7 +44,7 @@ func (g *PrometheusGenerator) Generate(outputDirectory string) error {
 		return errors.New("output directory can not be empty")
 	}
 
-	log.Info("generating files")
+	slog.Info("generating files")
 	generatedFiles, err := g.createGeneratedFiles()
 	if err != nil {
 		return errors.Wrap(err, "unable to create generated files")
@@ -52,7 +52,7 @@ func (g *PrometheusGenerator) Generate(outputDirectory string) error {
 
 	for _, generatedFile := range generatedFiles {
 		fullPath := path.Join(outputDirectory, generatedFile.Path)
-		log.Info("writing generated files", "file", fullPath)
+		slog.Info("writing generated files", "file", fullPath)
 		err := os.WriteFile(fullPath, generatedFile.Bytes(), 0664)
 		if err != nil {
 			return errors.Wrap(err, "unable to write file")
@@ -66,7 +66,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 	var generatedPrometheusRuleFiles []*generator.GeneratedFile
 	// loop through slos
 	for _, slo := range g.specs.V1.SLOs {
-		log.Info("generating prometheus recording rule", "slo", slo.Metadata.Name)
+		slog.Info("generating prometheus recording rule", "slo", slo.Metadata.Name)
 
 		// TODO: support indicator ref
 		// Ensure indicator is present
@@ -79,7 +79,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 		if slo.Spec.Indicator.Spec.RatioMetric != nil {
 			return nil, fmt.Errorf("ratio metrics are not supported")
 		} else {
-			promQuery = slo.Spec.Indicator.Spec.ThresholdMetric.MetricSource.MetricSourceSpec["query"].(string)
+			promQuery = slo.Spec.Indicator.Spec.ThresholdMetric.MetricSource.Spec["query"].(string)
 		}
 
 		// check if features are enabled
@@ -108,7 +108,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 		}
 
 		// extract days in time window
-		numberOfDays := numberRegex.FindString(slo.Spec.TimeWindow[0].Duration)
+		numberOfDays := numberRegex.FindString(slo.Spec.TimeWindow[0].Duration.String())
 
 		// template out prom rules
 		tpldData := templates.TemplateData{
@@ -116,7 +116,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			OpensloVersion:            string(slo.APIVersion),
 			PrometheusQuery:           windowedPromQueries[0].Query,
 			WindowedPrometheusQueries: windowedPromQueries,
-			Objective:                 strconv.FormatFloat(slo.Spec.Objectives[0].Target, 'f', -1, 32),
+			Objective:                 strconv.FormatFloat(*slo.Spec.Objectives[0].Target, 'f', -1, 64),
 			IsMulti:                   multiFeatureEnabled,
 			MultiDimensionalLabel:     multiDimSliLabel,
 			TimeWindowDays:            numberOfDays,

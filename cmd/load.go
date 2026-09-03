@@ -1,7 +1,9 @@
 package cmd
 
 import (
-	"github.com/charmbracelet/log"
+	"log/slog"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/thisisibrahimd/opensloctl/pkg/specstore"
 )
@@ -29,15 +31,15 @@ func newLoadCommand() *cobra.Command {
 }
 
 func runLoad(cmd *cobra.Command, args []string, flags loadFlags) {
-	log.Info("reading files/dirs", "number", len(flags.filenames))
+	slog.Info("reading files/dirs", "number", len(flags.filenames))
 
 	// Read and load specs
 	specStore := specstore.NewSpecStore(specstore.WithFilenames(flags.filenames), specstore.WithRecursive(flags.recursive))
 	specs, err := specStore.GetSpecs()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(1)
 	}
 
-	log.Info(specs)
-
+	slog.Info("specs loaded", "count", len(specs.V1.SLOs))
 }
