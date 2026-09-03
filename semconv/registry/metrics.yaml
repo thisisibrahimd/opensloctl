@@ -1,0 +1,170 @@
+file_format: definition/2
+
+metrics:
+  - name: openslo.slo.info
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: Identifies the existence of an SLO. Always has value 1.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.slo.objective
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: The target SLI objective (e.g., 0.999 for 99.9% availability).
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.slo.timewindow_days
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: The SLO time window duration expressed as a number of days.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.slo.error_budget
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: The error budget calculated as 1 minus the objective.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_5m
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 5-minute window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_30m
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 30-minute window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_1h
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 1-hour window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_2h
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 2-hour window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_6h
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 6-hour window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_1d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 1-day window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_3d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 3-day window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_7d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 7-day window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_28d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 28-day window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.error_rate_30d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI error rate over a 30-day window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
