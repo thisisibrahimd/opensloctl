@@ -45,7 +45,8 @@ groups:
     rules:
     {{- range .WindowedPrometheusQueries }}
     - record: openslo_sli_error_rate{{ .Window }}{{ if $.IsMulti }}_unlabeled{{end}}
-      expr: {{ .Query }}
+      expr: {{ if contains "\n" .Query }}|
+{{ .Query | indent 8 | trimSuffix "\n" }}{{ else }}{{ .Query }}{{ end }}
       labels:
         openslo_slo_name: {{ $.SloName }}
         openslo_spec_version: {{ $.OpensloVersion }}

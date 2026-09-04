@@ -219,8 +219,8 @@ func TestValidateRefs(t *testing.T) {
 		}{
 			{
 				name:          "resolved",
-				alertPolicies: []string{"my-policy"},
-				policyRefs:    []string{"my-policy"},
+				alertPolicies: []string{"page-14-4x-5m", "page-6x-30m", "ticket-3x-2h", "ticket-1x-6h"},
+				policyRefs:    []string{"page-14-4x-5m", "page-6x-30m", "ticket-3x-2h", "ticket-1x-6h"},
 				wantErr:       false,
 			},
 			{
@@ -242,16 +242,37 @@ func TestValidateRefs(t *testing.T) {
 						v1.Metadata{Name: pol},
 						v1.AlertPolicySpec{
 							AlertWhenBreaching: true,
-							Conditions:         []v1.AlertPolicyCondition{{AlertPolicyConditionRef: &v1.AlertPolicyConditionRef{ConditionRef: "cond"}}},
+							Conditions:         []v1.AlertPolicyCondition{{AlertPolicyConditionRef: &v1.AlertPolicyConditionRef{ConditionRef: pol}}},
 							NotificationTargets: []v1.AlertPolicyNotificationTarget{{AlertPolicyNotificationTargetRef: &v1.AlertPolicyNotificationTargetRef{TargetRef: "nt"}}},
 						},
 					)
 				}
-				specs.V1.AlertConditions["cond"] = v1.NewAlertCondition(
-					v1.Metadata{Name: "cond"},
+				specs.V1.AlertConditions["page-14-4x-5m"] = v1.NewAlertCondition(
+					v1.Metadata{Name: "page-14-4x-5m"},
 					v1.AlertConditionSpec{
 						Severity: "page",
-						Condition: v1.AlertConditionType{Kind: v1.AlertConditionKindBurnRate, Operator: v1.OperatorLTE, Threshold: ptr(2.0), LookbackWindow: v1.NewDurationShorthand(1, v1.DurationShorthandUnitHour)},
+						Condition: v1.AlertConditionType{Kind: v1.AlertConditionKindBurnRate, Operator: v1.OperatorLTE, Threshold: ptr(14.4), LookbackWindow: v1.NewDurationShorthand(5, v1.DurationShorthandUnitMinute)},
+					},
+				)
+				specs.V1.AlertConditions["page-6x-30m"] = v1.NewAlertCondition(
+					v1.Metadata{Name: "page-6x-30m"},
+					v1.AlertConditionSpec{
+						Severity: "page",
+						Condition: v1.AlertConditionType{Kind: v1.AlertConditionKindBurnRate, Operator: v1.OperatorLTE, Threshold: ptr(6.0), LookbackWindow: v1.NewDurationShorthand(30, v1.DurationShorthandUnitMinute)},
+					},
+				)
+				specs.V1.AlertConditions["ticket-3x-2h"] = v1.NewAlertCondition(
+					v1.Metadata{Name: "ticket-3x-2h"},
+					v1.AlertConditionSpec{
+						Severity: "ticket",
+						Condition: v1.AlertConditionType{Kind: v1.AlertConditionKindBurnRate, Operator: v1.OperatorLTE, Threshold: ptr(3.0), LookbackWindow: v1.NewDurationShorthand(2, v1.DurationShorthandUnitHour)},
+					},
+				)
+				specs.V1.AlertConditions["ticket-1x-6h"] = v1.NewAlertCondition(
+					v1.Metadata{Name: "ticket-1x-6h"},
+					v1.AlertConditionSpec{
+						Severity: "ticket",
+						Condition: v1.AlertConditionType{Kind: v1.AlertConditionKindBurnRate, Operator: v1.OperatorLTE, Threshold: ptr(1.0), LookbackWindow: v1.NewDurationShorthand(6, v1.DurationShorthandUnitHour)},
 					},
 				)
 				specs.V1.AlertNotificationTargets["nt"] = v1.NewAlertNotificationTarget(
@@ -547,7 +568,6 @@ func TestValidateRefs(t *testing.T) {
 				BudgetingMethod: v1.SLOBudgetingMethodOccurrences,
 				TimeWindow:      []v1.SLOTimeWindow{{Duration: v1.NewDurationShorthand(30, v1.DurationShorthandUnitDay), IsRolling: true}},
 				Objectives:      []v1.SLOObjective{{Target: ptr(0.999), Operator: v1.OperatorLTE, Value: ptr(500.0)}},
-				AlertPolicies:   []v1.SLOAlertPolicy{{SLOAlertPolicyRef: &v1.SLOAlertPolicyRef{AlertPolicyRef: "missing-pol"}}},
 			},
 		)
 
@@ -555,7 +575,6 @@ func TestValidateRefs(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `SLO "test-slo" references Service "missing-svc" not found`)
 		assert.Contains(t, err.Error(), `SLO "test-slo" references SLI "missing-sli" not found`)
-		assert.Contains(t, err.Error(), `SLO "test-slo" references AlertPolicy "missing-pol" not found`)
 	})
 
 	t.Run("all refs resolve no error", func(t *testing.T) {
@@ -567,25 +586,6 @@ func TestValidateRefs(t *testing.T) {
 			v1.Metadata{Name: "sli"},
 			v1.SLISpec{ThresholdMetric: &v1.SLIMetricSpec{MetricSource: v1.SLIMetricSource{Type: "Prometheus", Spec: map[string]any{"query": "up"}}}},
 		)
-		specs.V1.AlertConditions["cond"] = v1.NewAlertCondition(
-			v1.Metadata{Name: "cond"},
-			v1.AlertConditionSpec{
-				Severity: "page",
-				Condition: v1.AlertConditionType{Kind: v1.AlertConditionKindBurnRate, Operator: v1.OperatorLTE, Threshold: ptr(2.0), LookbackWindow: v1.NewDurationShorthand(1, v1.DurationShorthandUnitHour)},
-			},
-		)
-		specs.V1.AlertNotificationTargets["nt"] = v1.NewAlertNotificationTarget(
-			v1.Metadata{Name: "nt"},
-			v1.AlertNotificationTargetSpec{Target: "pagerduty"},
-		)
-		specs.V1.AlertPolices["pol"] = v1.NewAlertPolicy(
-			v1.Metadata{Name: "pol"},
-			v1.AlertPolicySpec{
-				AlertWhenBreaching: true,
-				Conditions:         []v1.AlertPolicyCondition{{AlertPolicyConditionRef: &v1.AlertPolicyConditionRef{ConditionRef: "cond"}}},
-				NotificationTargets: []v1.AlertPolicyNotificationTarget{{AlertPolicyNotificationTargetRef: &v1.AlertPolicyNotificationTargetRef{TargetRef: "nt"}}},
-			},
-		)
 		specs.V1.SLOs["test-slo"] = v1.NewSLO(
 			v1.Metadata{Name: "test-slo"},
 			v1.SLOSpec{
@@ -594,7 +594,6 @@ func TestValidateRefs(t *testing.T) {
 				BudgetingMethod: v1.SLOBudgetingMethodOccurrences,
 				TimeWindow:      []v1.SLOTimeWindow{{Duration: v1.NewDurationShorthand(30, v1.DurationShorthandUnitDay), IsRolling: true}},
 				Objectives:      []v1.SLOObjective{{Target: ptr(0.999), Operator: v1.OperatorLTE, Value: ptr(500.0)}},
-				AlertPolicies:   []v1.SLOAlertPolicy{{SLOAlertPolicyRef: &v1.SLOAlertPolicyRef{AlertPolicyRef: "pol"}}},
 			},
 		)
 

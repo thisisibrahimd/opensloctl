@@ -1,0 +1,32 @@
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: test-svc
+spec:
+  description: Test service
+---
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: test-singleline-slo
+spec:
+  description: Test SLO with single-line query
+  service: test-svc
+  indicator:
+    metadata:
+      name: test-sli-inline
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: Prometheus
+          spec:
+            query: up{service="test-svc"}
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "99.9% uptime"
+      target: 0.999
+      op: lte
+      value: 500

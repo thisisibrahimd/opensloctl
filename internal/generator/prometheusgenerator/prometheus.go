@@ -8,6 +8,7 @@ import (
 	"path"
 	"regexp"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -19,7 +20,8 @@ import (
 )
 
 const (
-	FILENAME_SUFFIX = "-recording-rules.yaml"
+	RECORDING_RULES_SUFFIX = "-recording-rules.yaml"
+	ALERT_RULES_SUFFIX     = "-alert-rules.yaml"
 )
 
 var (
@@ -36,7 +38,6 @@ func NewPrometheusGenerator(specs *specstore.OpenSLOSpecs) generator.Generator {
 	return &PrometheusGenerator{
 		specs: specs,
 	}
-
 }
 
 func (g *PrometheusGenerator) Generate(outputDirectory string) error {
@@ -53,7 +54,7 @@ func (g *PrometheusGenerator) Generate(outputDirectory string) error {
 	for _, generatedFile := range generatedFiles {
 		fullPath := path.Join(outputDirectory, generatedFile.Path)
 		slog.Info("writing generated files", "file", fullPath)
-		err := os.WriteFile(fullPath, generatedFile.Bytes(), 0664)
+		err := os.WriteFile(fullPath, generatedFile.Bytes(), 0o664)
 		if err != nil {
 			return errors.Wrap(err, "unable to write file")
 		}
@@ -79,7 +80,13 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 		if slo.Spec.Indicator.Spec.RatioMetric != nil {
 			return nil, fmt.Errorf("ratio metrics are not supported")
 		} else {
-			promQuery = slo.Spec.Indicator.Spec.ThresholdMetric.MetricSource.Spec["query"].(string)
+			metricSource := slo.Spec.Indicator.Spec.ThresholdMetric.MetricSource
+			if metricSource.MetricSourceRef != "" {
+				slog.Warn("SLI uses metricSourceRef, expected inline Prometheus type", "slo", slo.Metadata.Name, "ref", metricSource.MetricSourceRef)
+			} else if metricSource.Type != "Prometheus" {
+				slog.Warn("SLI metric source is not Prometheus type", "slo", slo.Metadata.Name, "type", metricSource.Type)
+			}
+			promQuery = metricSource.Spec["query"].(string)
 		}
 
 		// check if features are enabled
@@ -120,6 +127,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			IsMulti:                   multiFeatureEnabled,
 			MultiDimensionalLabel:     multiDimSliLabel,
 			TimeWindowDays:            numberOfDays,
+			AlertGroups:               g.buildAlertGroups(slo.Metadata.Name),
 		}
 
 		prometheusTemplate := template.Must(template.New("prometheus-recording-rules").Funcs(sprig.FuncMap()).Parse(templates.PrometheusRecordingRuleTemplate))
@@ -130,22 +138,114 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 		}
 
 		// create generated file struct
-		filename := slo.Metadata.Name + FILENAME_SUFFIX
+		filename := slo.Metadata.Name + RECORDING_RULES_SUFFIX
 		generatedPrometheusRuleFile := &generator.GeneratedFile{
 			Path: filename,
 			Data: generatedRecordingRules.String(),
 		}
 
 		generatedPrometheusRuleFiles = append(generatedPrometheusRuleFiles, generatedPrometheusRuleFile)
+
+		// generate alert rules if alert groups exist
+		if len(tpldData.AlertGroups) > 0 {
+			alertTemplate := template.Must(template.New("prometheus-alert-rules").Funcs(sprig.FuncMap()).Parse(templates.PrometheusAlertRuleTemplate))
+			var generatedAlertRules bytes.Buffer
+			err := alertTemplate.Execute(&generatedAlertRules, tpldData)
+			if err != nil {
+				return nil, fmt.Errorf("unable to execute alert template")
+			}
+
+			alertFilename := slo.Metadata.Name + ALERT_RULES_SUFFIX
+			generatedAlertRuleFile := &generator.GeneratedFile{
+				Path: alertFilename,
+				Data: generatedAlertRules.String(),
+			}
+			generatedPrometheusRuleFiles = append(generatedPrometheusRuleFiles, generatedAlertRuleFile)
+		}
 	}
 
 	return generatedPrometheusRuleFiles, nil
 }
 
-// func (g *PrometheusGenerator) generateName() string {
+func (g *PrometheusGenerator) buildAlertGroups(sloName string) map[string]templates.AlertGroup {
+	if g.specs == nil {
+		return nil
+	}
 
-// }
+	sloObj, ok := g.specs.V1.SLOs[sloName]
+	if !ok {
+		return nil
+	}
+	if len(sloObj.Spec.AlertPolicies) == 0 {
+		return nil
+	}
 
-// func (g *PrometheusGenerator) generateFiles() ([]generator.GeneratedFile, error) {
-// 	return nil, nil
-// }
+	alertGroups := make(map[string]templates.AlertGroup)
+
+	for _, alertPolicyRef := range sloObj.Spec.AlertPolicies {
+		polRef := alertPolicyRef.AlertPolicyRef
+		policy, ok := g.specs.V1.AlertPolices[polRef]
+		if !ok {
+			slog.Warn("alert policy not found", "slo", sloName, "policy", polRef)
+			continue
+		}
+
+		for _, condRef := range policy.Spec.Conditions {
+			condKey := condRef.ConditionRef
+			condition, ok := g.specs.V1.AlertConditions[condKey]
+			if !ok {
+				slog.Warn("alert condition not found", "slo", sloName, "condition", condKey)
+				continue
+			}
+
+			if condition.Spec.Condition.Kind != "burnrate" {
+				continue
+			}
+
+			severity := condition.Spec.Severity
+			threshold := condition.Spec.Condition.Threshold
+			lookback := condition.Spec.Condition.LookbackWindow.String()
+			alertAfter := condition.Spec.Condition.AlertAfter.String()
+
+			op := "gte"
+			if condition.Spec.Condition.Operator != "" {
+				op = string(condition.Spec.Condition.Operator)
+			}
+
+			burnRateExpr := fmt.Sprintf(
+				"openslo_sli_error_rate%s{openslo_slo_name=\"%s\"} / (1 - openslo_slo_objective{openslo_slo_name=\"%s\"}) %s %f",
+				lookback, sloName, sloName, op, *threshold,
+			)
+
+			group, exists := alertGroups[severity]
+			if !exists {
+				group = templates.AlertGroup{
+					For: alertAfter,
+				}
+			}
+
+			group.Conditions = append(group.Conditions, templates.AlertCondition{
+				Expr: burnRateExpr,
+			})
+
+			thresholds := appendIfMissing(group.Thresholds, fmt.Sprintf("%.1fx", *threshold))
+			lookbacks := appendIfMissing(group.Lookbacks, lookback)
+			group.Thresholds = thresholds
+			group.Lookbacks = lookbacks
+
+			alertGroups[severity] = group
+		}
+	}
+
+	return alertGroups
+}
+
+func appendIfMissing(existing, newItem string) string {
+	if existing == "" {
+		return newItem
+	}
+	if !strings.Contains(existing, newItem) {
+		return existing + " and " + newItem
+	}
+	return existing
+}

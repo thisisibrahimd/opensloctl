@@ -15,5 +15,3 @@ spec:
       target: 0.999
       op: lte
       value: 500
-  alertPolicies:
-    - alertPolicyRef: test-alert-policy

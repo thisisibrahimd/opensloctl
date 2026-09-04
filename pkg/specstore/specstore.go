@@ -224,6 +224,61 @@ func (s *OpenSLOSpecs) ValidateRefs() error {
 		}
 	}
 
+	// validate complete burn rate condition sets per SLO
+	for sloName, slo := range s.V1.SLOs {
+		// collect all condition refs from this SLO's alert policies
+		conditionRefs := make(map[string]bool)
+		for _, ap := range slo.Spec.AlertPolicies {
+			if ap.SLOAlertPolicyRef != nil && ap.AlertPolicyRef != "" {
+				if policy, ok := s.V1.AlertPolices[ap.AlertPolicyRef]; ok {
+					for _, cond := range policy.Spec.Conditions {
+						if cond.AlertPolicyConditionRef != nil && cond.ConditionRef != "" {
+							conditionRefs[cond.ConditionRef] = true
+						}
+					}
+				}
+			}
+		}
+
+		if len(conditionRefs) == 0 {
+			continue
+		}
+
+		// group conditions by severity
+		type conditionInfo struct {
+			threshold      float64
+			lookbackWindow string
+		}
+		pageConditions := make(map[string]conditionInfo)
+		ticketConditions := make(map[string]conditionInfo)
+
+		for ref := range conditionRefs {
+			if cond, ok := s.V1.AlertConditions[ref]; ok {
+				info := conditionInfo{}
+				if cond.Spec.Condition.Threshold != nil {
+					info.threshold = *cond.Spec.Condition.Threshold
+				}
+				info.lookbackWindow = cond.Spec.Condition.LookbackWindow.String()
+			switch cond.Spec.Severity {
+			case "page":
+				pageConditions[ref] = info
+			case "ticket":
+				ticketConditions[ref] = info
+			}
+			}
+		}
+
+		// validate page has both conditions (14.4x@5m and 6x@30m)
+		if len(pageConditions) > 0 && len(pageConditions) < 2 {
+			errs = append(errs, xerrors.Newf("incomplete page burn rate conditions for SLO %q: expected 2 conditions (14.4x@5m and 6x@30m), found %d", sloName, len(pageConditions)))
+		}
+
+		// validate ticket has both conditions (3x@2h and 1x@6h)
+		if len(ticketConditions) > 0 && len(ticketConditions) < 2 {
+			errs = append(errs, xerrors.Newf("incomplete ticket burn rate conditions for SLO %q: expected 2 conditions (3x@2h and 1x@6h), found %d", sloName, len(ticketConditions)))
+		}
+	}
+
 	if len(errs) > 0 {
 		return xerrors.Join(errs)
 	}
