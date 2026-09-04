@@ -1,0 +1,17 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: slo-with-refs
+spec:
+  description: SLO with references
+  service: test-service
+  indicatorRef: test-sli
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "99.9% availability"
+      target: 0.999
+      op: lte
+      value: 500

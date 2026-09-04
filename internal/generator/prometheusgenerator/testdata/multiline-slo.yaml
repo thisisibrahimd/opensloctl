@@ -1,0 +1,36 @@
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: test-svc
+spec:
+  description: Test service
+---
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: test-multiline-slo
+spec:
+  description: Test SLO with multiline query
+  service: test-svc
+  indicator:
+    metadata:
+      name: test-sli
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: Prometheus
+          spec:
+            query: |
+              histogram_quantile(0.99,
+                sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[{{.Window}}]))
+                by (le)
+              )
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "P99 latency"
+      target: 0.999
+      op: lte
+      value: 500

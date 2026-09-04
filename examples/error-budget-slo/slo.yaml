@@ -1,0 +1,21 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: checkout-availability-slo
+  annotations:
+    team: payments
+    service-tier: revenue-critical
+spec:
+  description: Checkout maintains 99.95% success rate over rolling 30-day window
+  service: checkout-service
+  indicatorRef: checkout-success-rate
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "99.95% success rate"
+      target: 0.9995
+  alertPolicies:
+    - alertPolicyRef: checkout-page-alert
+    - alertPolicyRef: checkout-ticket-alert

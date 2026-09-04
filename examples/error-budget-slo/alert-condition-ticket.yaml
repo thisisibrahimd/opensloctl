@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: checkout-ticket
+spec:
+  severity: ticket
+  description: Ticket on sustained checkout error budget burn
+  condition:
+    kind: burnrate
+    op: gte
+    threshold: 3
+    lookbackWindow: 2h
+    alertAfter: 15m

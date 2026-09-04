@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: api-gateway
+  displayName: API Gateway
+spec:
+  description: Main API gateway handling all incoming requests

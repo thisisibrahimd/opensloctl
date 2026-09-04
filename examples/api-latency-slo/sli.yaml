@@ -1,0 +1,12 @@
+apiVersion: openslo/v1
+kind: SLI
+metadata:
+  name: api-latency-p99
+spec:
+  description: 99th percentile API response latency
+  thresholdMetric:
+    metricSource:
+      metricSourceRef: prometheus
+      type: Prometheus
+      spec:
+        query: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service="api-gateway"}[{{.Window}}])) by (le))

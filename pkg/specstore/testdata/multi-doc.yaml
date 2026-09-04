@@ -1,0 +1,31 @@
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: svc-a
+spec:
+  description: Service A
+---
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: slo-a
+spec:
+  description: SLO A
+  service: svc-a
+  indicator:
+    metadata:
+      name: slo-a-inline-sli
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: Prometheus
+          spec:
+            query: "up"
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - target: 0.999
+      op: lte
+      value: 500

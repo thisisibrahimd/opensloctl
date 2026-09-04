@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: AlertNotificationTarget
+metadata:
+  name: slack-alerts
+spec:
+  description: Post alerts to team Slack channel
+  target: slack

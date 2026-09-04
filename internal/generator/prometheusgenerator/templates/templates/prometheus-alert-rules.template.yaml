@@ -1,0 +1,21 @@
+groups:
+  - name: openslo-burnrate-alerts-{{ .SloName }}
+    rules:
+    {{- range $severity, $alertData := .AlertGroups }}
+    - alert: OpenSLO_{{ $severity | title }}_BurnRate_{{ $.SloName }}
+      expr: |-
+        {{- range $i, $cond := $alertData.Conditions }}
+        {{- if $i }}
+        or
+        {{- end }}
+        {{ $cond.Expr }}
+        {{- end }}
+      for: {{ $alertData.For }}
+      labels:
+        severity: {{ $severity }}
+        openslo_slo_name: {{ $.SloName }}
+        openslo_spec_version: {{ $.OpensloVersion }}
+      annotations:
+        summary: "{{ $severity | title }} burn rate alert for SLO {{ $.SloName }}"
+        description: "Burn rate exceeds {{ $alertData.Thresholds }}x for {{ $alertData.Lookbacks }}"
+    {{- end }}

@@ -1,0 +1,23 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: api-latency-slo
+  annotations:
+    team: platform
+    service-tier: critical
+spec:
+  description: API gateway responds within 500ms for 99.9% of requests
+  service: api-gateway
+  indicatorRef: api-latency-p99
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "P99 latency < 500ms"
+      target: 0.999
+      op: lte
+      value: 500
+  alertPolicies:
+    - alertPolicyRef: api-latency-page-alert
+    - alertPolicyRef: api-latency-ticket-alert

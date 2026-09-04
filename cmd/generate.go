@@ -36,10 +36,9 @@ func newGenerateCommand() *cobra.Command {
 func runGenerate(cmd *cobra.Command, args []string, flags generateFlags) {
 	slog.Info("running generate command")
 
-	specStore := specstore.NewSpecStore(specstore.WithFilenames(flags.filenames), specstore.WithRecursive(flags.recursive))
-	specs, err := specStore.GetSpecs()
+	specs, err := specstore.GetSpecs(flags.filenames, flags.recursive)
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("unable to load specs", "err", err)
 		os.Exit(1)
 	}
 

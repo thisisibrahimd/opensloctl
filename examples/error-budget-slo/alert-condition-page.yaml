@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: checkout-page
+spec:
+  severity: page
+  description: Page when checkout error budget burns fast
+  condition:
+    kind: burnrate
+    op: gte
+    threshold: 14.4
+    lookbackWindow: 5m
+    alertAfter: 2m

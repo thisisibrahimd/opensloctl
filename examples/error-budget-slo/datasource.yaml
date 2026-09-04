@@ -1,0 +1,9 @@
+apiVersion: openslo/v1
+kind: DataSource
+metadata:
+  name: prometheus
+spec:
+  type: Prometheus
+  description: Prometheus metrics server
+  connectionDetails:
+    url: http://prometheus.monitoring.svc:9090

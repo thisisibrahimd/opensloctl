@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: AlertNotificationTarget
+metadata:
+  name: payments-slack
+spec:
+  description: Alert payments team Slack
+  target: slack

@@ -42,7 +42,7 @@ func FindFiles(filenames []string, recursive bool) ([]string, error) {
 				}
 				if !d.IsDir() {
 					extension := filepath.Ext(path)
-					if extension == ".yaml" || extension == ".yml" {
+					if extension == ".yaml" || extension == ".yml" || extension == ".json" {
 						slog.Info("found file", "filename", path)
 						filesFound = append(filesFound, path)
 					}
