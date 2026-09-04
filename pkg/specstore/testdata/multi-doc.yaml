@@ -12,10 +12,20 @@ metadata:
 spec:
   description: SLO A
   service: svc-a
-  indicatorRef: sli-a
+  indicator:
+    metadata:
+      name: slo-a-inline-sli
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: Prometheus
+          spec:
+            query: "up"
   budgetingMethod: Occurrences
   timeWindow:
     - duration: 30d
       isRolling: true
   objectives:
     - target: 0.999
+      op: lte
+      value: 500

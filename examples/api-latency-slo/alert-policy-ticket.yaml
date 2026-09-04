@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: api-latency-ticket-alert
+spec:
+  description: Ticket alert for API latency burn rate
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: api-latency-ticket
+  notificationTargets:
+    - targetRef: slack-alerts

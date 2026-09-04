@@ -349,7 +349,7 @@ func TestGetSpecs(t *testing.T) {
 		},
 		{
 			name:    "single slo file",
-			files:   []string{filepath.Join(testdata, "slo.yaml")},
+			files:   []string{filepath.Join(testdata, "slo.yaml"), filepath.Join(testdata, "service.yaml")},
 			wantSLO: "test-slo",
 		},
 		{

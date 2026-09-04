@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: checkout-ticket-alert
+spec:
+  description: Ticket alert for checkout error budget burn rate
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: checkout-ticket
+  notificationTargets:
+    - targetRef: payments-slack

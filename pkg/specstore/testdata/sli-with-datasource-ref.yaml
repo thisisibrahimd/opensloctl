@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: SLI
+metadata:
+  name: sli-with-datasource-ref
+spec:
+  description: SLI with datasource reference
+  thresholdMetric:
+    metricSource:
+      metricSourceRef: test-datasource
+      spec:
+        query: "up"

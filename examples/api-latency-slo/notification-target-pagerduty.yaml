@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: AlertNotificationTarget
+metadata:
+  name: oncall-pagerduty
+spec:
+  description: Page on-call engineer via PagerDuty
+  target: pagerduty

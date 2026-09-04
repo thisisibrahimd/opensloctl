@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: AlertNotificationTarget
+metadata:
+  name: payments-pagerduty
+spec:
+  description: Page payments team on-call
+  target: pagerduty

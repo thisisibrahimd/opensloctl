@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: api-latency-page-alert
+spec:
+  description: Page alert for API latency burn rate
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: api-latency-page
+  notificationTargets:
+    - targetRef: oncall-pagerduty

@@ -1,0 +1,20 @@
+apiVersion: openslo/v1
+kind: SLI
+metadata:
+  name: checkout-success-rate
+spec:
+  description: Ratio of successful checkout requests
+  ratioMetric:
+    counter: true
+    good:
+      metricSource:
+        metricSourceRef: prometheus
+        type: Prometheus
+        spec:
+          query: sum(rate(http_requests_total{service="checkout-service", status=~"2.."}[{{.Window}}]))
+    total:
+      metricSource:
+        metricSourceRef: prometheus
+        type: Prometheus
+        spec:
+          query: sum(rate(http_requests_total{service="checkout-service"}[{{.Window}}]))

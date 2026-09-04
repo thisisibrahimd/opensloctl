@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: api-latency-ticket
+spec:
+  severity: ticket
+  description: Create ticket on sustained API latency burn rate
+  condition:
+    kind: burnrate
+    op: gte
+    threshold: 3
+    lookbackWindow: 2h
+    alertAfter: 15m

@@ -1,19 +1,11 @@
 apiVersion: openslo/v1
 kind: SLO
 metadata:
-  name: test-slo
+  name: slo-with-refs
 spec:
-  description: Test SLO
+  description: SLO with references
   service: test-service
-  indicator:
-    metadata:
-      name: test-sli-inline
-    spec:
-      thresholdMetric:
-        metricSource:
-          type: Prometheus
-          spec:
-            query: "up"
+  indicatorRef: test-sli
   budgetingMethod: Occurrences
   timeWindow:
     - duration: 30d
@@ -23,3 +15,5 @@ spec:
       target: 0.999
       op: lte
       value: 500
+  alertPolicies:
+    - alertPolicyRef: test-alert-policy

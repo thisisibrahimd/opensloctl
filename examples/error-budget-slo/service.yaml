@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: checkout-service
+  displayName: Checkout Service
+spec:
+  description: E-commerce checkout and payment processing
