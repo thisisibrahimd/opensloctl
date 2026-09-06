@@ -1,7 +1,7 @@
 groups:
   - name: openslo-info-recordings-{{ .SloName }}
     rules:
-    - record: openslo_slo_info{{ if $.IsMulti }}_unlabled{{end}}
+    - record: openslo_slo_info{{ if $.IsMulti }}_unlabeled{{end}}
       expr: vector(1)
       labels:
         openslo_slo_name: {{ .SloName }}
@@ -9,7 +9,7 @@ groups:
         {{- range $k, $v := .ExtraLabels }}
         {{ $k }}: {{ $v }}
         {{- end }}
-    - record: openslo_slo_objective{{ if $.IsMulti }}_unlabled{{end}}
+    - record: openslo_slo_objective{{ if $.IsMulti }}_unlabeled{{end}}
       expr: vector({{ .Objective }})
       labels:
         openslo_slo_name: {{ .SloName }}
@@ -17,7 +17,7 @@ groups:
         {{- range $k, $v := .ExtraLabels }}
         {{ $k }}: {{ $v }}
         {{- end }}
-    - record: openslo_slo_timewindow_days{{ if $.IsMulti }}_unlabled{{end}}
+    - record: openslo_slo_timewindow_days{{ if $.IsMulti }}_unlabeled{{end}}
       expr: vector({{.TimeWindowDays}})
       labels:
         openslo_slo_name: {{ .SloName }}
@@ -25,7 +25,7 @@ groups:
         {{- range $k, $v := .ExtraLabels }}
         {{ $k }}: {{ $v }}
         {{- end }}
-    - record: openslo_slo_error_budget{{ if $.IsMulti }}_unlabled{{end}}
+    - record: openslo_slo_error_budget{{ if $.IsMulti }}_unlabeled{{end}}
       expr: vector(1- {{.Objective}})
       labels:
         openslo_slo_name: {{ .SloName }}
@@ -33,7 +33,7 @@ groups:
         {{- range $k, $v := .ExtraLabels }}
         {{ $k }}: {{ $v }}
         {{- end }}
-    - record: openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabled{{end}}
+    - record: openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}
       expr: |
         openslo_sli_error_rate_5m{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
         / on(openslo_slo_name, openslo_spec_version) group_left
@@ -45,7 +45,7 @@ groups:
         {{ $k }}: {{ $v }}
         {{- end }}
     {{- if .PeriodWindow }}
-    - record: openslo_slo_period_burn_rate{{ if $.IsMulti }}_unlabled{{end}}
+    - record: openslo_slo_period_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}
       expr: |
         openslo_sli_error_rate_{{ .PeriodWindow }}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
         / on(openslo_slo_name, openslo_spec_version) group_left
@@ -56,8 +56,8 @@ groups:
         {{- range $k, $v := .ExtraLabels }}
         {{ $k }}: {{ $v }}
         {{- end }}
-    - record: openslo_slo_period_error_budget_remaining{{ if $.IsMulti }}_unlabled{{end}}
-      expr: 1 - openslo_slo_period_burn_rate{{ if $.IsMulti }}_unlabled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+    - record: openslo_slo_period_error_budget_remaining{{ if $.IsMulti }}_unlabeled{{end}}
+      expr: clamp_min(1 - openslo_slo_period_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 0)
       labels:
         openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
@@ -98,7 +98,7 @@ groups:
       labels:
         openslo_spec_version: {{ .OpensloVersion }}
     - record: openslo_slo_period_error_budget_remaining
-      expr: 1 - openslo_slo_period_burn_rate{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+      expr: clamp_min(1 - openslo_slo_period_burn_rate{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 0)
       labels:
         openslo_spec_version: {{ .OpensloVersion }}
     {{- end }}
@@ -124,6 +124,42 @@ groups:
         openslo_spec_version: {{ $.OpensloVersion }}
     {{- end }}
     {{- end }}
+  {{- if .StatusThresholds }}
+  - name: openslo-status-recordings-{{ .SloName }}
+    rules:
+    - record: openslo_slo_status{{ if $.IsMulti }}_unlabeled{{end}}
+      expr: |
+        (
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}} >= {{ .StatusThresholds.Breached }})
+          * 3
+        )
+        or
+        (
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}} >= {{ .StatusThresholds.Critical }})
+          and
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}} <  {{ .StatusThresholds.Breached }})
+          * 2
+        )
+        or
+        (
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}} >= {{ .StatusThresholds.Warning }})
+          and
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}} <  {{ .StatusThresholds.Critical }})
+          * 1
+        )
+      labels:
+        openslo_slo_name: {{ .SloName }}
+        openslo_spec_version: {{ .OpensloVersion }}
+        {{- range $k, $v := .ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
+    {{- if .IsMulti }}
+    - record: openslo_slo_status
+      expr: label_join(openslo_slo_status_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
+      labels:
+        openslo_spec_version: {{ .OpensloVersion }}
+    {{- end }}
+  {{- end }}
   {{- if .AlertGroups }}
   - name: openslo-alerts-{{ .SloName }}
     rules:

@@ -68,6 +68,22 @@ type TemplateData struct {
 	// be ranged over to render `key: value` lines.
 	ExtraLabels map[string]string `json:"extra_labels"`
 	AlertGroups map[string]AlertGroup `json:"alert_groups"`
+	// StatusThresholds powers the openslo_slo_status gauge. Always
+	// provided — defaults fill in missing annotations independently
+	// per specstore.ParseStatusThreshold. The template currently emits
+	// the status rule for every SLO; tightening to "only SLOs with
+	// alert policies" is a follow-up if non-monitored SLOs become a
+	// signal-noise concern.
+	StatusThresholds *StatusThresholds `json:"status_thresholds,omitempty"`
+}
+
+// StatusThresholds carries the resolved warning/critical/breached
+// thresholds for the openslo_slo_status gauge. Floats, not strings,
+// so the template can format them straight into PromQL comparisons.
+type StatusThresholds struct {
+	Warning  float64 `json:"warning"`
+	Critical float64 `json:"critical"`
+	Breached float64 `json:"breached"`
 }
 
 type WindowData struct {

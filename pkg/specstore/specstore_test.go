@@ -1456,61 +1456,61 @@ func TestValidateStatusThresholds(t *testing.T) {
 		{
 			name: "all overrides valid ascending positive",
 			ann: map[string]string{
-				statusThresholdAnnotationWarning:  "2",
-				statusThresholdAnnotationCritical: "10",
-				statusThresholdAnnotationBreached: "20",
+				StatusThresholdAnnotationWarning:  "2",
+				StatusThresholdAnnotationCritical: "10",
+				StatusThresholdAnnotationBreached: "20",
 			},
 			wantErr: false,
 		},
 		{
 			name: "partial override — only breached supplied",
 			ann: map[string]string{
-				statusThresholdAnnotationBreached: "50",
+				StatusThresholdAnnotationBreached: "50",
 			},
 			wantErr: false,
 		},
 		{
 			name: "non-numeric override falls back to default silently",
 			ann: map[string]string{
-				statusThresholdAnnotationWarning: "TODO",
+				StatusThresholdAnnotationWarning: "TODO",
 			},
 			wantErr: false,
 		},
 		{
 			name: "warning >= critical rejected",
 			ann: map[string]string{
-				statusThresholdAnnotationWarning:  "10",
-				statusThresholdAnnotationCritical: "5",
+				StatusThresholdAnnotationWarning:  "10",
+				StatusThresholdAnnotationCritical: "5",
 			},
 			wantErr: true,
 		},
 		{
 			name: "critical >= breached rejected",
 			ann: map[string]string{
-				statusThresholdAnnotationCritical: "20",
-				statusThresholdAnnotationBreached: "10",
+				StatusThresholdAnnotationCritical: "20",
+				StatusThresholdAnnotationBreached: "10",
 			},
 			wantErr: true,
 		},
 		{
 			name: "warning == critical rejected (not strictly ascending)",
 			ann: map[string]string{
-				statusThresholdAnnotationWarning:  "5",
-				statusThresholdAnnotationCritical: "5",
+				StatusThresholdAnnotationWarning:  "5",
+				StatusThresholdAnnotationCritical: "5",
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero threshold rejected",
 			ann: map[string]string{
-				statusThresholdAnnotationWarning: "0",
+				StatusThresholdAnnotationWarning: "0",
 			},
 			wantErr: true,
 		},
 		{
 			name: "negative threshold rejected",
 			ann: map[string]string{
-				statusThresholdAnnotationCritical: "-5",
+				StatusThresholdAnnotationCritical: "-5",
 			},
 			wantErr: true,
 		},

@@ -446,30 +446,30 @@ func (s *OpenSLOSpecs) ValidateRefs() error {
 	return nil
 }
 
-// statusThresholdAnnotationKey{Warning,Critical,Breached} are the SLO
-// metadata.annotation keys that override the default status-gauge ranges
-// (defaults 1/6/14.4 per the Google SRE workbook). Used by both the
-// specstore validator and the generator/semconv docs.
+// StatusThresholdAnnotationWarning, Critical, Breached are the SLO
+// metadata.annotation keys that override the default status-gauge
+// ranges (defaults 1/6/14.4 per the Google SRE workbook). Exported so
+// the generator and tests can reference the same string literals.
 const (
-	statusThresholdAnnotationWarning  = "threshold.status.openslo.com/warning"
-	statusThresholdAnnotationCritical = "threshold.status.openslo.com/critical"
-	statusThresholdAnnotationBreached = "threshold.status.openslo.com/breached"
+	StatusThresholdAnnotationWarning  = "threshold.status.openslo.com/warning"
+	StatusThresholdAnnotationCritical = "threshold.status.openslo.com/critical"
+	StatusThresholdAnnotationBreached = "threshold.status.openslo.com/breached"
 )
 
-// statusThresholdDefaults mirror the SRE-workbook burn-rate reference
+// StatusThresholdDefault* mirror the SRE-workbook burn-rate reference
 // points used when no annotation override is supplied.
 const (
-	statusThresholdDefaultWarning   = 1.0
-	statusThresholdDefaultCritical  = 6.0
-	statusThresholdDefaultBreached  = 14.4
+	StatusThresholdDefaultWarning   = 1.0
+	StatusThresholdDefaultCritical  = 6.0
+	StatusThresholdDefaultBreached  = 14.4
 )
 
-// parseStatusThreshold parses a status-threshold annotation value as a
-// float. Returns the default when the annotation is absent or empty.
-// Returns an error only when the value is non-empty but not parseable,
-// so a stray reminder note ("TODO: tune later") falls back to the
-// default silently instead of failing the load.
-func parseStatusThreshold(raw string, def float64) (float64, error) {
+// ParseStatusThreshold parses a status-threshold annotation value as a
+// float. Returns the default when the annotation is absent, empty, or
+// unparseable — so a stray reminder note like "TODO: tune later"
+// falls back silently rather than failing the load. The returned error
+// is reserved for future use; current callers all expect nil.
+func ParseStatusThreshold(raw string, def float64) (float64, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return def, nil
@@ -485,17 +485,17 @@ func parseStatusThreshold(raw string, def float64) (float64, error) {
 // the resolved (warning, critical, breached) triple. Each annotation is
 // optional; missing annotations fall back to defaults independently.
 func validateStatusThresholds(ann map[string]string) error {
-	warn, err := parseStatusThreshold(ann[statusThresholdAnnotationWarning], statusThresholdDefaultWarning)
+	warn, err := ParseStatusThreshold(ann[StatusThresholdAnnotationWarning], StatusThresholdDefaultWarning)
 	if err != nil {
-		return xerrors.Newf("annotation %q: %v", statusThresholdAnnotationWarning, err)
+		return xerrors.Newf("annotation %q: %v", StatusThresholdAnnotationWarning, err)
 	}
-	crit, err := parseStatusThreshold(ann[statusThresholdAnnotationCritical], statusThresholdDefaultCritical)
+	crit, err := ParseStatusThreshold(ann[StatusThresholdAnnotationCritical], StatusThresholdDefaultCritical)
 	if err != nil {
-		return xerrors.Newf("annotation %q: %v", statusThresholdAnnotationCritical, err)
+		return xerrors.Newf("annotation %q: %v", StatusThresholdAnnotationCritical, err)
 	}
-	breach, err := parseStatusThreshold(ann[statusThresholdAnnotationBreached], statusThresholdDefaultBreached)
+	breach, err := ParseStatusThreshold(ann[StatusThresholdAnnotationBreached], StatusThresholdDefaultBreached)
 	if err != nil {
-		return xerrors.Newf("annotation %q: %v", statusThresholdAnnotationBreached, err)
+		return xerrors.Newf("annotation %q: %v", StatusThresholdAnnotationBreached, err)
 	}
 	if warn <= 0 || crit <= 0 || breach <= 0 {
 		return xerrors.Newf("warning=%g critical=%g breached=%g must all be positive", warn, crit, breach)

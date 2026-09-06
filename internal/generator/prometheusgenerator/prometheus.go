@@ -136,7 +136,12 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			}
 			goodQuery := goodSource.Spec["query"].(string)
 			totalQuery := totalSource.Spec["query"].(string)
-			promQuery = fmt.Sprintf("(%s)\n/\n(%s)", goodQuery, totalQuery)
+			// The SLI metric is named `openslo_sli_error_rate_*` so it must hold
+			// the actual error rate (bad / total = 1 - good/total). Burn rate
+			// formulas downstream divide this by error_budget, so emitting the
+			// success rate here would invert the meaning (a healthy service
+			// would register as burning thousands of times its budget).
+			promQuery = fmt.Sprintf("1 - (\n%s\n)\n/\n(\n%s\n)", goodQuery, totalQuery)
 		} else {
 			metricSource := indicator.Spec.ThresholdMetric.MetricSource
 			if metricSource.Type != "Prometheus" {
@@ -223,6 +228,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			PeriodWindow:              periodWindow,
 			ExtraLabels:               extraLabels,
 			AlertGroups:               g.buildAlertGroups(slo.Metadata.Name),
+			StatusThresholds:          buildStatusThresholds(slo.Metadata.Annotations),
 		}
 
 		prometheusTemplate := template.Must(template.New("prometheus-rules").Funcs(sprig.FuncMap()).Parse(templates.PrometheusRulesTemplate))
@@ -590,4 +596,27 @@ func appendIfMissing(existing, newItem string) string {
 		return existing + " and " + newItem
 	}
 	return existing
+}
+
+// resolveStatusThresholds reads the three SLO annotation overrides and
+// resolves each against its SRE-workbook default. Non-numeric values
+// fall back to the default silently (specstore validation rejects
+// ascending/positive violations at load time).
+func resolveStatusThresholds(ann map[string]string) (warn, crit, breach float64) {
+	warn, _ = specstore.ParseStatusThreshold(ann[specstore.StatusThresholdAnnotationWarning], specstore.StatusThresholdDefaultWarning)
+	crit, _ = specstore.ParseStatusThreshold(ann[specstore.StatusThresholdAnnotationCritical], specstore.StatusThresholdDefaultCritical)
+	breach, _ = specstore.ParseStatusThreshold(ann[specstore.StatusThresholdAnnotationBreached], specstore.StatusThresholdDefaultBreached)
+	return warn, crit, breach
+}
+
+// buildStatusThresholds returns resolved threshold values, or nil when
+// the SLO has no alert policies (status gauge is only meaningful for
+// monitored SLOs).
+func buildStatusThresholds(ann map[string]string) *templates.StatusThresholds {
+	warn, crit, breach := resolveStatusThresholds(ann)
+	return &templates.StatusThresholds{
+		Warning:  warn,
+		Critical: crit,
+		Breached: breach,
+	}
 }
