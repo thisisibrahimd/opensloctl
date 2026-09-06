@@ -60,6 +60,36 @@ const (
 	// SLI error rate over a 7-day window.
 	METRIC_OPENSLO_SLI_ERROR_RATE_7D = "openslo.sli.error_rate_7d"
 
+	// SLI event rate over a 1-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_1D = "openslo.sli.event_rate_1d"
+
+	// SLI event rate over a 1-hour window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_1H = "openslo.sli.event_rate_1h"
+
+	// SLI event rate over a 28-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_28D = "openslo.sli.event_rate_28d"
+
+	// SLI event rate over a 2-hour window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_2H = "openslo.sli.event_rate_2h"
+
+	// SLI event rate over a 30-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_30D = "openslo.sli.event_rate_30d"
+
+	// SLI event rate over a 30-minute window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_30M = "openslo.sli.event_rate_30m"
+
+	// SLI event rate over a 3-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_3D = "openslo.sli.event_rate_3d"
+
+	// SLI event rate (events per second) over a 5-minute window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_5M = "openslo.sli.event_rate_5m"
+
+	// SLI event rate over a 6-hour window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_6H = "openslo.sli.event_rate_6h"
+
+	// SLI event rate over a 7-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_7D = "openslo.sli.event_rate_7d"
+
 	// Instantaneous error-budget burn rate = 5-minute SLI error rate divided by the error budget.
 	METRIC_OPENSLO_SLO_CURRENT_BURN_RATE = "openslo.slo.current_burn_rate"
 
