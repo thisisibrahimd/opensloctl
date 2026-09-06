@@ -597,9 +597,22 @@ opensloctl defines a registry of metrics and attributes for SLO telemetry. The r
 | Attribute | Type | Description |
 |---|---|---|
 | `openslo.slo.name` | string | The name of the SLO as defined in the OpenSlo spec. |
-| `openslo.spec.version` | string | The OpenSLO API version of the SLO spec. |
+| `openslo.spec.version` | string | The OpenSlo API version of the SLO spec. |
+| `openslo.service.name` | string | The name of the service the SLO belongs to. |
+| `openslo.alert.severity` | string | The alert severity (e.g., page, ticket) attached to SLO alert rules. |
+| `openslo.notification.target` | string | The notification target for an alert (e.g., pagerduty, slack, engineers). |
+
+Deprecated attributes (still emitted as Go constants for back-compat, marked `deprecated.reason: obsoleted` in the registry):
+
+| Attribute | Type | Reason |
+|---|---|---|
+| `openslo.objective.decimal` | double | Unused; openslo_slo_objective recording rule carries the value. |
+| `openslo.objective.percent` | double | Unused; openslo_slo_objective recording rule carries the value. |
+| `openslo.timewindow.duration` | string | Unused; encoded in the SLI error-rate windowed recording rules. |
 
 ### Metrics
+
+All metrics carry `openslo.slo.name` and `openslo.spec.version` attributes unless otherwise noted.
 
 #### SLO Info
 
@@ -609,8 +622,10 @@ opensloctl defines a registry of metrics and attributes for SLO telemetry. The r
 | `openslo.slo.objective` | gauge | 1 | The target SLI objective (e.g., 0.999 for 99.9% availability). |
 | `openslo.slo.timewindow_days` | gauge | 1 | The SLO time window duration expressed as a number of days. |
 | `openslo.slo.error_budget` | gauge | 1 | The error budget calculated as 1 minus the objective. |
-
-All SLO info metrics carry `openslo.slo.name` and `openslo.spec.version` labels.
+| `openslo.slo.current_burn_rate` | gauge | 1 | Instantaneous error-budget burn rate = 5-minute SLI error rate divided by the error budget. |
+| `openslo.slo.period_burn_rate` | gauge | 1 | Period error-budget burn rate = full-window SLI error rate (typically 30d) divided by the error budget. Emitted when an SLO time window matches the multi-window set. |
+| `openslo.slo.period_error_budget_remaining` | gauge | 1 | Remaining error budget ratio over the full period = `clamp_min(1 - period_burn_rate, 0)`. Bounded to `[0, 1]` so dashboards don't chart large negatives. |
+| `openslo.slo.status` | gauge | 1 | Categorical health state. `0` = Healthy, `1` = Burning, `2` = Critical, `3` = Breached. Driven by `current_burn_rate` against overridable thresholds (defaults `1/6/14.4×` per the SRE workbook). See [Status gauge](#status-gauge) above. |
 
 #### SLI Error Rate
 
@@ -627,7 +642,11 @@ All SLO info metrics carry `openslo.slo.name` and `openslo.spec.version` labels.
 | `openslo.sli.error_rate_28d` | SLI error rate over a 28-day window. |
 | `openslo.sli.error_rate_30d` | SLI error rate over a 30-day window. |
 
-All error rate metrics carry `openslo.slo.name` and `openslo.spec.version` labels.
+#### SLI Event Rate (RatioMetric SLIs only)
+
+| Metric | Description |
+|---|---|
+| `openslo.sli.event_rate_5m` … `_30d` | SLI event rate (events/sec) over each multi-window. Emitted only for `RatioMetric` SLIs since the spec exposes a `total` count query. Use these in dashboards to interpret error-budget burn in absolute event-volume terms, not just ratio. ThresholdMetric (histogram-style) SLIs do not emit this metric because the spec lacks a parallel `event_count` query. |
 
 ### Registry Management
 
@@ -678,5 +697,10 @@ Alternatively, if you don't use Weaver, the Go constants are available at `githu
 import "github.com/thisisibrahimd/opensloctl/pkg/semconv"
 
 // Use generated constants
-meter.Float64ObservableGauge(semconv.METRIC_OPENSLO_SLO_INFO)
+meter.Float64ObservableGauge(semcov.METRIC_OPENSLO_SLO_INFO)
+
+// Status gauge — single lookup returns 0/1/2/3 against overridable thresholds
+gauge := meter.Float64ObservableGauge(semcov.METRIC_OPENSLO_SLO_STATUS,
+    api.WithDescription("SLO categorical health state"))
+
 ```
