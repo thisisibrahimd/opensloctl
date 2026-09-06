@@ -20,6 +20,7 @@ Generate Prometheus recording rules and alerting rules from OpenSlo specs.
   - [Field reference](#field-reference)
   - [Validation](#validation-1)
   - [Run the examples](#run-the-examples)
+- [Multi-dimensional SLIs](#multi-dimensional-slis)
 - [Semantic Conventions](#semantic-conventions)
 
 ## Installation
@@ -94,6 +95,8 @@ For each SLO, opensloctl generates Prometheus recording rules that:
 
 1. **Expose SLO metadata** — `openslo_slo_info`, `openslo_slo_objective`, `openslo_slo_timewindow_days`, `openslo_slo_error_budget`
 2. **Pre-compute SLI error rates** — `openslo_sli_error_rate_5m`, `_30m`, `_1h`, `_2h`, `_6h`, `_1d`, `_3d`, `_7d`, `_28d`, `_30d`
+3. **Event rate** (RatioMetric SLIs) — `openslo_sli_event_rate_<window>` per multi-window: events-per-second from the underlying SLI source query. Lets Grafana panels show traffic context for budget-burn interpretation.
+4. **Categorical status** — `openslo_slo_status` ∈ `{0, 1, 2, 3}` derived from the current burn rate against overridable thresholds (see [Status gauge](#status-gauge) below).
 
 The SLI error rate metrics are computed from your Prometheus query with window variables templated in. For example, if your SLI query is:
 
@@ -115,6 +118,10 @@ groups:
       expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[30m])) by (le))
       labels:
         openslo_slo_name: api-latency-slo
+    - record: openslo_sli_event_rate_5m           # RatioMetric only
+      expr: sum(rate(http_requests_total[5m]))
+      labels:
+        openslo_slo_name: api-latency-slo
 ```
 
 Multiline queries are preserved using YAML block scalars (`|`):
@@ -125,6 +132,29 @@ Multiline queries are preserved using YAML block scalars (`|`):
         histogram_quantile(0.99,
           sum(rate(http_request_duration_seconds_bucket{job="api"}[5m])) by (le))
 ```
+
+#### Status gauge
+
+`openslo_slo_status` is a single integer gauge per SLO carrying the categorical health state. Dashboard-friendly because one lookup per SLO replaces three threshold comparisons:
+
+| Value | Label   | Trigger |
+|-------|---------|---------|
+| `0`   | Healthy | `openslo_slo_current_burn_rate < warning` |
+| `1`   | Burning | `warning ≤ current_burn_rate < critical` |
+| `2`   | Critical | `critical ≤ current_burn_rate < breached` |
+| `3`   | Breached | `current_burn_rate ≥ breached` |
+
+Defaults follow Google SRE Workbook burn-rate reference points: **warning = 1×, critical = 6×, breached = 14.4×**. Override any threshold via SLO annotations:
+
+```yaml
+metadata:
+  annotations:
+    threshold.status.openslo.com/warning: "1"
+    threshold.status.openslo.com/critical: "6"
+    threshold.status.openslo.com/breached: "14.4"
+```
+
+Each annotation is optional; missing ones fall back to defaults independently. The resolved triple must be strictly ascending and positive; otherwise `opensloctl validate` exits 1. Non-numeric values fall back to defaults silently so scratch notes (`TODO`) don't fail validation.
 
 ### Alert Rules
 
@@ -464,6 +494,7 @@ Five examples ship with the repo, each showcasing a different kind:
 | `examples/error-budget-slo/` | `burn-rate` (single threshold per severity) |
 | `examples/error-rate-slo/` | `error-rate` (absolute error rate threshold) |
 | `examples/multi-burn-slo/` | `multi-burn-rate` (multiple windows OR-ed) |
+| `examples/multi-dim-slo/` | `burn-rate` + multi-dim annotation (one SLO → many series) |
 | `examples/oteldemo/specs/` | `multi-window-multi-burn-rate` (full tiered setup across 12 SLOs) |
 
 ```bash
@@ -483,6 +514,79 @@ ls output/
 ```
 
 Each SLO produces a single `<slo-name>-rules.yaml` containing its recording rules and (if alert policies are referenced) alert rules in one file.
+
+## Multi-dimensional SLIs
+
+A single SLO can be expanded into many recording rule series — one per value of a chosen Prometheus label — by setting two annotations on the SLO's `metadata.annotations`. This is useful when one underlying metric naturally produces many series (per-customer, per-region, per-route, per-caller service) and you want shared SLO target definitions across all of them with per-dimension burn visibility.
+
+### Annotations
+
+| Annotation | Required | Role |
+|---|---|---|
+| `multi-dimensional-sli.openslo.com/label` | yes | The Prometheus label whose value is joined into `openslo_slo_name` to produce one series per value |
+| `multi-dimensional-sli.openslo.com/dimensions` | info only | Human-readable list of dimension values; not used by the generator |
+
+### How it works
+
+When both annotations are set, the generator emits two layers of recording rules for the SLO:
+
+1. **Base `_unlabeled` recordings** — each metric (`openslo_slo_info`, `openslo_slo_objective`, `openslo_slo_timewindow_days`, `openslo_slo_error_budget`, `openslo_slo_current_burn_rate`, `openslo_slo_period_burn_rate`, `openslo_slo_period_error_budget_remaining`, and every `openslo_sli_error_rate_*`) is emitted with the `_unlabeled` suffix. They carry only `openslo_slo_name` and `openslo_spec_version` labels; the chosen dimension label flows through from the underlying source query's series.
+2. **Post-process `label_join` rules** — sibling rules that join the value of the chosen dimension label into `openslo_slo_name` with `-` as the separator, producing one series per dimension value.
+
+After Prometheus evaluates the rules, you see one series per dimension value, e.g. for `service_name=account,checkout,recommendation`:
+
+```
+openslo_slo_current_burn_rate{openslo_slo_name="account-api-latency"}      = 0.2
+openslo_slo_current_burn_rate{openslo_slo_name="checkout-api-latency"}     = 1.4
+openslo_slo_current_burn_rate{openslo_slo_name="recommendation-api-latency"} = 4.7
+```
+
+### Example spec
+
+```yaml
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: api-latency
+  annotations:
+    multi-dimensional-sli.openslo.com/label: service_name
+    multi-dimensional-sli.openslo.com/dimensions: "account,checkout,recommendation"
+spec:
+  service: api-gateway
+  indicator:
+    metadata:
+      name: api-gateway-latency-sli
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: Prometheus
+          spec:
+            query: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api-gateway"}[{{.Window}}])) by (le))
+  objectives:
+    - displayName: "P99 latency under 500ms"
+      target: 0.999
+```
+
+A complete working example lives at [`examples/multi-dim-slo/`](examples/multi-dim-slo/).
+
+### When to use
+
+Use multi-dimensional SLIs when:
+
+- The underlying metric already splits by a label and you want shared target definitions across all series.
+- Alert routing benefits from per-dimension firing rather than aggregate (e.g. per-caller-service paging).
+- You want per-dimension burn dashboards without writing one SLO per dimension.
+
+Skip when:
+
+- The cardinal label is unbounded (`user_id`, raw trace IDs) — recording-rule count grows linearly with cardinality and burns Prometheus.
+- You only care about the aggregate across all series — a regular single-dim SLO is simpler.
+
+### Trade-offs
+
+- Recording rule count grows linearly with the cardinality of the chosen label. Pick a bounded label with a known max (caller services, regions, routes).
+- The dimension value is embedded in `openslo_slo_name` rather than as a separate label — dashboard queries must filter by prefix match or use the original source label.
+- Alert rule names (`ApiLatencySloBurnRate`) span all dimension values; severity in the `severity` label differentiates per-dimension alerts.
 
 ## Semantic Conventions
 
