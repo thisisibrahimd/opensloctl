@@ -78,6 +78,10 @@ const (
 	// Remaining error budget ratio over the full period = 1 minus period_burn_rate (1 = full budget remaining).
 	METRIC_OPENSLO_SLO_PERIOD_ERROR_BUDGET_REMAINING = "openslo.slo.period_error_budget_remaining"
 
+	// Categorical SLO health state derived from the current burn rate against overridable thresholds. Values: 0=Healthy (burn<warning), 1=Burning (warning<=burn<critical), 2=Critical (critical<=burn<breached), 3=Breached (burn>=breached). Defaults follow Google SRE workbook reference points (1/6/14.4x) and can be overridden per SLO via threshold.status.openslo.com/{warning, critical,breached} annotations. Emitted only for SLOs that reference one or more AlertPolicies.
+
+	METRIC_OPENSLO_SLO_STATUS = "openslo.slo.status"
+
 	// The SLO time window duration expressed as a number of days.
 	METRIC_OPENSLO_SLO_TIMEWINDOW_DAYS = "openslo.slo.timewindow_days"
 )

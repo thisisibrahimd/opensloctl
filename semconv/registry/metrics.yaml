@@ -210,3 +210,23 @@ metrics:
         requirement_level: required
       - ref: openslo.spec.version
         requirement_level: required
+
+  - name: openslo.slo.status
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: >
+      Categorical SLO health state derived from the current burn rate
+      against overridable thresholds. Values: 0=Healthy
+      (burn<warning), 1=Burning (warning<=burn<critical), 2=Critical
+      (critical<=burn<breached), 3=Breached (burn>=breached). Defaults
+      follow Google SRE workbook reference points (1/6/14.4x) and can
+      be overridden per SLO via threshold.status.openslo.com/{warning,
+      critical,breached} annotations. Emitted only for SLOs that
+      reference one or more AlertPolicies.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
