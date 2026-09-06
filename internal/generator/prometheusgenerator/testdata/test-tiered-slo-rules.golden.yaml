@@ -1,0 +1,185 @@
+groups:
+  - name: openslo-info-recordings-test-tiered-slo
+    rules:
+    - record: openslo_slo_info
+      expr: vector(1)
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_objective
+      expr: vector(0.999)
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_timewindow_days
+      expr: vector(30)
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_error_budget
+      expr: vector(1- 0.999)
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_current_burn_rate
+      expr: |
+        openslo_sli_error_rate_5m{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_period_burn_rate
+      expr: |
+        openslo_sli_error_rate_30d{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_period_error_budget_remaining
+      expr: 1 - openslo_slo_period_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+  - name: openslo-sli-recordings-test-tiered-slo
+    rules:
+    - record: openslo_sli_error_rate_5m
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[5m])))
+        /
+        (sum(rate(http_requests_total[5m])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_30m
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[30m])))
+        /
+        (sum(rate(http_requests_total[30m])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_1h
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[1h])))
+        /
+        (sum(rate(http_requests_total[1h])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_3h
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[3h])))
+        /
+        (sum(rate(http_requests_total[3h])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_6h
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[6h])))
+        /
+        (sum(rate(http_requests_total[6h])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_1d
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[1d])))
+        /
+        (sum(rate(http_requests_total[1d])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_3d
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[3d])))
+        /
+        (sum(rate(http_requests_total[3d])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_7d
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[7d])))
+        /
+        (sum(rate(http_requests_total[7d])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_28d
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[28d])))
+        /
+        (sum(rate(http_requests_total[28d])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_30d
+      expr: |
+        (sum(rate(http_requests_total{status=~"2.."}[30d])))
+        /
+        (sum(rate(http_requests_total[30d])))
+      labels:
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+  - name: openslo-alerts-test-tiered-slo
+    rules:
+    - alert: TestTieredSloMultiWindowMultiBurnRate
+      expr: |-
+        (
+        openslo_sli_error_rate_5m{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 14.400000
+        and
+        openslo_sli_error_rate_1h{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 14.400000)
+        or
+        (
+        openslo_sli_error_rate_30m{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 6.000000
+        and
+        openslo_sli_error_rate_6h{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 6.000000)
+      for: 2m
+      labels:
+        severity: page
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+      annotations:
+        summary: "Page multi-window multi-burn rate alert for SLO test-tiered-slo"
+        description: "Threshold 14.4x and 6.0x over 5m and 1h and 30m and 6h"
+    - alert: TestTieredSloMultiWindowMultiBurnRate
+      expr: |-
+        (
+        openslo_sli_error_rate_2h{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 3.000000
+        and
+        openslo_sli_error_rate_1d{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 3.000000)
+        or
+        (
+        openslo_sli_error_rate_6h{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 1.000000
+        and
+        openslo_sli_error_rate_3d{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 1.000000)
+      for: 15m
+      labels:
+        severity: ticket
+        openslo_slo_name: test-tiered-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+      annotations:
+        summary: "Ticket multi-window multi-burn rate alert for SLO test-tiered-slo"
+        description: "Threshold 3.0x and 1.0x over 2h and 1d and 6h and 3d"

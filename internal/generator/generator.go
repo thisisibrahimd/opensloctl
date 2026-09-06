@@ -12,4 +12,5 @@ func (f *GeneratedFile) Bytes() []byte {
 
 type Generator interface {
 	Generate(outputDirectory string) error
+	Validate() error
 }

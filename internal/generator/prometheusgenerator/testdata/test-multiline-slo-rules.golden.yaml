@@ -1,0 +1,163 @@
+groups:
+  - name: openslo-info-recordings-test-multiline-slo
+    rules:
+    - record: openslo_slo_info
+      expr: vector(1)
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_objective
+      expr: vector(0.999)
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_timewindow_days
+      expr: vector(30)
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_error_budget
+      expr: vector(1- 0.999)
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_current_burn_rate
+      expr: |
+        openslo_sli_error_rate_5m{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_period_burn_rate
+      expr: |
+        openslo_sli_error_rate_30d{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_slo_period_error_budget_remaining
+      expr: 1 - openslo_slo_period_burn_rate{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+  - name: openslo-sli-recordings-test-multiline-slo
+    rules:
+    - record: openslo_sli_error_rate_5m
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[5m]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_30m
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[30m]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_1h
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[1h]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_3h
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[3h]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_6h
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[6h]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_1d
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[1d]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_3d
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[3d]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_7d
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[7d]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_28d
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[28d]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+    - record: openslo_sli_error_rate_30d
+      expr: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{service="test-svc"}[30d]))
+          by (le)
+        )
+        
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
