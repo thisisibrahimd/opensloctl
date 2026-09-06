@@ -3,10 +3,20 @@
 ## Commands
 
 ```
+make build                        # go build -o opensloctl .
 make lint                         # golangci-lint run
 make test                         # go test ./...
+make tidy                         # go mod tidy
 make load FILE=<file>             # parse and print OpenSlo specs
-make generate FILE=<f> OUTPUT=<d> # generate Prometheus recording rules
+make validate FILE=<file>         # validate OpenSlo specs without writing files
+make generate FILE=<f> OUTPUT=<d> # generate Prometheus rules (<slo-name>-rules.yaml)
+```
+
+Via `go run` (supports `-r` recursive flag, Makefile targets do not):
+```
+go run . load -f <file> [-r]
+go run . validate -f <file> [-r]
+go run . generate -f <file> -o <dir> [-r]
 ```
 
 Semconv registry (Weaver):
@@ -14,21 +24,25 @@ Semconv registry (Weaver):
 make semconv-generate             # registry YAML → pkg/semconv/semconv_gen.go
 make semconv-check                # validate registry schema
 make semconv-stats                # show registry statistics
+make semconv-json                 # output registry JSON schema
 make semconv-diff BASE=<ref>      # detect breaking changes vs base ref
 ```
 
 ## Architecture
 
 - `main.go` → `cmd.Execute()` — single entrypoint
-- CLI: cobra-based, two subcommands: `load`, `generate`
-  - Both accept `-f` (filename, repeatable) and `-r` (recursive directory scan)
+- CLI: cobra-based, three subcommands: `load`, `validate`, `generate`
+  - All accept `-f` (filename, repeatable) and `-r` (recursive directory scan)
   - `generate` also requires `-o` (output directory)
+  - `validate` runs full validation (load-time + generator-side) without writing files
 - `pkg/specstore/loader.go` — loads YAML files via `openslosdk.Decode`, sorts into typed `OpenSloSpecs` struct
 - `internal/generator/generator.go` — `Generator` interface
-- `internal/generator/prometheusgenerator/` — generates Prometheus recording rule YAML from SLO specs using Go templates + sprig (embedded via `//go:embed`)
+- `internal/generator/prometheusgenerator/` — generates Prometheus rules YAML from SLO specs using Go templates + sprig (embedded via `//go:embed`). One unified output file per SLO: `<slo-name>-rules.yaml` (covering recording rules and, if alert policies are referenced, alert rules via an `openslo-alerts-<slo-name>` group inside the same file).
 - `internal/feature/feature.go` — feature flags for multi-dimensional SLI annotations
 - `pkg/semconv/semconv_gen.go` — **auto-generated** from semconv registry (do not edit manually)
 - `pkg/util/file.go` — recursive YAML/YML file discovery
+- `semconv/registry/` — OpenTelemetry Weaver registry YAML (metrics + attributes)
+- `semconv/templates/go/` — MiniJinja templates for semconv codegen
 
 ## Semconv Codegen Flow
 
@@ -64,6 +78,7 @@ Run `make semconv-generate` after editing registry YAML or templates. `go genera
 - Non-OpenSlo YAML files silently skipped (continue on decode error)
 - `semconv_gen.go` is auto-generated — never hand-edit
 - Feature flags use SLO annotations: `multi-dimensional-sli.openslo.com/dimensions` + `multi-dimensional-sli.openslo.com/label`
+- All scripting and testing scratch files (ad-hoc specs, output dirs, fixtures) must live in `./tmp` inside the repo — never `/tmp` or other system-global paths. The `./tmp` dir is gitignored scratch space scoped to this worktree.
 
 ## SDK API Notes (github.com/OpenSLO/go-sdk)
 
