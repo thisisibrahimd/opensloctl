@@ -16,10 +16,12 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Bind the repo-root dashboards into Grafana's provisioning path.
-      # The file-provider.yaml inside this directory is wired to scan
-      # the same target.
+      # Bind the repo-root dashboards (JSON files) into Grafana's
+      # provisioning path.
       - ../../dashboards:/etc/grafana/provisioning/dashboards
+      # Bind the provisioning yaml (single file) alongside the
+      # JSONs so Grafana's file provider config gets loaded at startup.
+      - ../openslo-dashboards.yaml:/etc/grafana/provisioning/dashboards/openslo-dashboards.yaml
 
   jaeger:
     ports:
