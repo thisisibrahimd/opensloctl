@@ -382,6 +382,13 @@ func (s *OpenSLOSpecs) ValidateRefs() error {
 				}
 			}
 		}
+
+		// opensloctl supports at most one notification target per AlertPolicy
+		// so each generated Prometheus alert can carry a single
+		// openslo_notification_target label.
+		if len(ap.Spec.NotificationTargets) > 1 {
+			errs = append(errs, xerrors.Newf("AlertPolicy %q has %d notificationTargets; only one is supported", name, len(ap.Spec.NotificationTargets)))
+		}
 	}
 
 	// validate SLI → DataSource references
