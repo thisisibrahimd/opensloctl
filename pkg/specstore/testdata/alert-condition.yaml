@@ -6,7 +6,7 @@ spec:
   severity: page
   description: Test alert condition
   condition:
-    kind: burnrate
+    kind: multi-window-multi-burn-rate
     op: lte
     threshold: 2.0
     lookbackWindow: 1h
