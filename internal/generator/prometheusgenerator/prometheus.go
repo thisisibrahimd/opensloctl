@@ -287,13 +287,14 @@ func (g *PrometheusGenerator) buildAlertGroups(sloName string) map[string]templa
 
 	// Track per-severity: ordered tier names → slice of conditions, plus aggregates.
 	type severityState struct {
-		kind       specstore.AlertConditionKind
-		tierOrder  []string
-		tierIndex  map[string]int
-		tiers      []templates.AlertTier
-		thresholds string
-		lookbacks  string
-		for_       string // shortest alertAfter across all conditions in this severity
+		kind              specstore.AlertConditionKind
+		tierOrder         []string
+		tierIndex         map[string]int
+		tiers             []templates.AlertTier
+		thresholds        string
+		lookbacks         string
+		for_              string // shortest alertAfter across all conditions in this severity
+		notificationTarget string // resolved spec.target of the first AlertPolicy
 	}
 	stateBySev := make(map[string]*severityState)
 
@@ -303,6 +304,19 @@ func (g *PrometheusGenerator) buildAlertGroups(sloName string) map[string]templa
 		if !ok {
 			slog.Warn("alert policy not found", "slo", sloName, "policy", polRef)
 			continue
+		}
+
+		// Resolve the single notification target this AlertPolicy carries.
+		// ValidateRefs already enforced len(notificationTargets) <= 1, and
+		// resolved every targetRef at load time. We collect the resolved
+		// spec.target string here so the alert rule can carry an
+		// openslo_notification_target label for Alertmanager routing.
+		var policyTarget string
+		if len(policy.Spec.NotificationTargets) == 1 {
+			ntRef := policy.Spec.NotificationTargets[0].TargetRef
+			if nt, ok := g.specs.V1.AlertNotificationTargets[ntRef]; ok {
+				policyTarget = nt.Spec.Target
+			}
 		}
 
 		for _, condRef := range policy.Spec.Conditions {
@@ -399,6 +413,19 @@ func (g *PrometheusGenerator) buildAlertGroups(sloName string) map[string]templa
 			if state.for_ == "" || alertAfter < state.for_ {
 				state.for_ = alertAfter
 			}
+
+			// Mismatched notification targets between policies of the same
+			// severity can't be represented in a single openslo_notification_target
+			// label; surface loudly and leave the label empty so the issue is
+			// obvious in the generated rules rather than silently picking one.
+			if policyTarget != "" {
+				if state.notificationTarget == "" {
+					state.notificationTarget = policyTarget
+				} else if state.notificationTarget != policyTarget {
+					slog.Error("AlertPolicy notification targets differ within severity; openslo_notification_target label omitted", "slo", sloName, "severity", severity, "have", state.notificationTarget, "got", policyTarget, "policy", polRef)
+					state.notificationTarget = ""
+				}
+			}
 		}
 	}
 
@@ -412,13 +439,14 @@ func (g *PrometheusGenerator) buildAlertGroups(sloName string) map[string]templa
 	alertGroups := make(map[string]templates.AlertGroup, len(stateBySev))
 	for severity, state := range stateBySev {
 		alertGroups[severity] = templates.AlertGroup{
-			Tiers:           state.tiers,
-			For:             state.for_,
-			Thresholds:      state.thresholds,
-			Lookbacks:       state.lookbacks,
-			KindPascal:      specstore.KindPascal(state.kind),
-			KindDescription: specstore.KindDescription(state.kind),
-			SloNamePascal:   specstore.SloNamePascal(sloName),
+			Tiers:              state.tiers,
+			For:                state.for_,
+			Thresholds:         state.thresholds,
+			Lookbacks:          state.lookbacks,
+			KindPascal:         specstore.KindPascal(state.kind),
+			KindDescription:    specstore.KindDescription(state.kind),
+			SloNamePascal:      specstore.SloNamePascal(sloName),
+			NotificationTarget: state.notificationTarget,
 		}
 	}
 	return alertGroups

@@ -34,15 +34,20 @@ type AlertTier struct {
 // used in alert summary annotations. SloNamePascal is the SLO's kebab-case
 // name with hyphens removed and each segment title-cased, so the rendered
 // alert name stays a single PascalCase identifier with no underscores.
+// NotificationTarget is the resolved name of the AlertPolicy's single
+// notification target (e.g. "engineers"), emitted as the
+// openslo_notification_target Prometheus label to enable Alertmanager
+// routing. Empty when the AlertPolicy doesn't reference a target.
 type AlertGroup struct {
-	Tiers           []AlertTier `json:"tiers"`
-	For             string      `json:"for"`
-	Thresholds      string      `json:"thresholds"`
-	Lookbacks       string      `json:"lookbacks"`
-	ThresholdLabel  string      `json:"threshold_label"`
-	KindPascal      string      `json:"kind_pascal"`
-	KindDescription string      `json:"kind_description"`
-	SloNamePascal   string      `json:"slo_name_pascal"`
+	Tiers             []AlertTier `json:"tiers"`
+	For               string      `json:"for"`
+	Thresholds        string      `json:"thresholds"`
+	Lookbacks         string      `json:"lookbacks"`
+	ThresholdLabel    string      `json:"threshold_label"`
+	KindPascal        string      `json:"kind_pascal"`
+	KindDescription   string      `json:"kind_description"`
+	SloNamePascal     string      `json:"slo_name_pascal"`
+	NotificationTarget string      `json:"notification_target"`
 }
 
 type TemplateData struct {
