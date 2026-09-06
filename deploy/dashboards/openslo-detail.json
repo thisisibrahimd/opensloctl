@@ -1,0 +1,352 @@
+{
+  "uid": "openslo-detail",
+  "title": "OpenSLO — Detail",
+  "tags": ["openslo"],
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-7d", "to": "now"},
+  "timezone": "",
+  "description": "Per-SLO detail view. Pick one SLO from the list to load its SLI, error budget, burn rate, event rate, and active alerts.",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {"selected": false, "text": "", "value": ""},
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "slo",
+        "type": "query",
+        "label": "SLO",
+        "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+        "query": "label_values(openslo_slo_info, openslo_slo_name)",
+        "refresh": 2,
+        "includeAll": false,
+        "current": {"selected": false, "text": "", "value": ""}
+      },
+      {
+        "name": "dim",
+        "type": "custom",
+        "label": "Dimension",
+        "query": "(.+)-$slo",
+        "regex": true,
+        "current": {"selected": false, "text": "All", "value": "All"},
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "SLO",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "instantQuery": true,
+          "expr": "openslo_slo_info{openslo_slo_name=\"$slo\"}",
+          "legendFormat": "{{openslo_slo_name}}"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "graphMode": "none",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Service",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "instantQuery": true,
+          "expr": "openslo_slo_info{openslo_slo_name=\"$slo\"}",
+          "legendFormat": "{{openslo_service_name}}"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "Objective",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "instantQuery": true,
+          "expr": "openslo_slo_objective{openslo_slo_name=\"$slo\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "dark-green", "value": 0.99}
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "orientation": "auto",
+        "showThresholdLabels": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Window",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "instantQuery": true,
+          "expr": "openslo_slo_timewindow_days{openslo_slo_name=\"$slo\"}"
+        }
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "graphMode": "none",
+        "suffix": "d"
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "SLI rate (28d)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "error rate",
+          "expr": "openslo_sli_error_rate_28d{openslo_slo_name=\"$slo\"}"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "objective",
+          "expr": "vector(scalar(openslo_slo_objective{openslo_slo_name=\"$slo\"}))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "objective"},
+            "properties": [
+              {"id": "custom.lineStyle", "value": {"fill": "dash", "width": 2}}
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {"showLegend": true, "displayMode": "list"}
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "SLI average (28d)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg_over_time(openslo_sli_error_rate_28d{openslo_slo_name=\"$slo\"}[$__range])"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Period error budget remaining",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "remaining fraction",
+          "expr": "openslo_slo_period_error_budget_remaining{openslo_slo_name=\"$slo\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": -5,
+          "max": 1
+        }
+      },
+      "options": {
+        "legend": {"showLegend": true, "displayMode": "list"}
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Status",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "instantQuery": true,
+          "expr": "openslo_slo_status{openslo_slo_name=\"$slo\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": {
+            "type": "value",
+            "options": {
+              "0": {"text": "Healthy", "color": "green", "index": 0},
+              "1": {"text": "Burning", "color": "yellow", "index": 1},
+              "2": {"text": "Critical", "color": "orange", "index": 2},
+              "3": {"text": "Breached", "color": "red", "index": 3}
+            }
+          },
+          "color": {"mode": "thresholds"}
+        }
+      },
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Current burn rate ×",
+      "gridPos": {"x": 0, "y": 20, "w": 24, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "burn ×",
+          "expr": "openslo_slo_current_burn_rate{openslo_slo_name=\"$slo\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "orange", "value": 6},
+              {"color": "red", "value": 14.4}
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {"showLegend": true, "displayMode": "list"}
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Event rate (28d, RatioMetric only)",
+      "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "events/sec",
+          "expr": "openslo_sli_event_rate_28d{openslo_slo_name=\"$slo\"} or vector(0)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": {"showLegend": true, "displayMode": "list"}
+      }
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Active SLO alerts",
+      "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "instantQuery": true,
+          "expr": "ALERTS{alertstate=~\"firing|pending\", alertname=~\".*$slo.*\"}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "ds": true,
+              "environment": true,
+              "region": true,
+              "severity_value": true,
+              "value": true
+            },
+            "renameByName": {
+              "alertname": "Alert",
+              "alertstate": "State",
+              "openslo_alert_severity": "Severity",
+              "openslo_slo_name": "SLO",
+              "openslo_notification_target": "Target"
+            }
+          }
+        }
+      ],
+      "options": {
+        "showTableHead": true,
+        "sortBy": [{"displayName": "State", "desc": true}],
+        "sortIndex": 1,
+        "footer": {"show": false}
+      }
+    }
+  ]
+}
