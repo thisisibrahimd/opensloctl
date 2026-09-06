@@ -143,7 +143,10 @@ groups:
         {{- end }}
       for: {{ $alertData.For }}
       labels:
-        severity: {{ $severity }}
+        openslo_alert_severity: {{ $severity }}
+        {{- if $alertData.NotificationTarget }}
+        openslo_notification_target: {{ $alertData.NotificationTarget }}
+        {{- end }}
         openslo_slo_name: {{ $.SloName }}
         openslo_spec_version: {{ $.OpensloVersion }}
         {{- range $k, $v := $.ExtraLabels }}
