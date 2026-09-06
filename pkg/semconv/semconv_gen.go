@@ -6,6 +6,12 @@ package semconv
 // Metric names from the openslo semantic convention registry.
 const (
 
+	// The alert severity (e.g., page, ticket) attached to SLO alert rules.
+	ATTRIBUTE_OPENSLO_ALERT_SEVERITY = "openslo.alert.severity"
+
+	// The notification target for an alert (e.g., pagerduty, slack, engineers).
+	ATTRIBUTE_OPENSLO_NOTIFICATION_TARGET = "openslo.notification.target"
+
 	// The SLO objective expressed as a decimal value (e.g., 0.999).
 	ATTRIBUTE_OPENSLO_OBJECTIVE_DECIMAL = "openslo.objective.decimal"
 

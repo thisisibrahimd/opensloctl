@@ -30,3 +30,13 @@ attributes:
     type: string
     stability: development
     brief: The time window duration for the SLO (e.g., 28d).
+
+  - key: openslo.alert.severity
+    type: string
+    stability: development
+    brief: The alert severity (e.g., page, ticket) attached to SLO alert rules.
+
+  - key: openslo.notification.target
+    type: string
+    stability: development
+    brief: The notification target for an alert (e.g., pagerduty, slack, engineers).
