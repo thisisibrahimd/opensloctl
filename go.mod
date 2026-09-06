@@ -7,6 +7,7 @@ require (
 	github.com/OpenSLO/go-sdk v0.9.2
 	github.com/mdobak/go-xerrors v1.0.1
 	github.com/pkg/errors v0.9.1
+	github.com/sebdah/goldie/v2 v2.8.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 )
@@ -23,6 +24,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/nobl9/govy v0.26.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
