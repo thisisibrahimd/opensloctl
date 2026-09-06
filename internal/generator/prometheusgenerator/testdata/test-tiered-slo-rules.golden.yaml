@@ -246,21 +246,21 @@ groups:
     - record: openslo_slo_status
       expr: |
         (
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}} >= 14.4)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"} >= 14.4)
           * 3
         )
         or
         (
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}} >= 6)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"} >= 6)
           and
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}} <  14.4)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"} <  14.4)
           * 2
         )
         or
         (
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}} >= 1)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"} >= 1)
           and
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"}} <  6)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-tiered-slo", openslo_spec_version="openslo/v1"} <  6)
           * 1
         )
       labels:
