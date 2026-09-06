@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: payment-ticket-1x
+spec:
+  severity: ticket
+  description: Ticket on slow payment burn rate (1x over 6h)
+  condition:
+    kind: multi-burn-rate
+    op: gte
+    threshold: 1
+    lookbackWindow: 6h
+    alertAfter: 30m

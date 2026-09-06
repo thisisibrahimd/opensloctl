@@ -1,0 +1,33 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: checkout-availability
+spec:
+  description: Checkout availability, 99.9% over a rolling 30-day window
+  service: checkout
+  indicator:
+    metadata:
+      name: checkout-availability-indicator
+    spec:
+      ratioMetric:
+        counter: true
+        good:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: sum(rate(checkout_requests_total{status="success"}[{{.Window}}]))
+        total:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: sum(rate(checkout_requests_total[{{.Window}}]))
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "99.9% checkout success"
+      target: 0.999
+  alertPolicies:
+    - alertPolicyRef: checkout-page-alert
+    - alertPolicyRef: checkout-ticket-alert

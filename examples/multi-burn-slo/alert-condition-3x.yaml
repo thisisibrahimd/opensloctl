@@ -1,12 +1,12 @@
 apiVersion: openslo/v1
 kind: AlertCondition
 metadata:
-  name: api-latency-ticket
+  name: payment-ticket-3x
 spec:
   severity: ticket
-  description: Create ticket on sustained API latency burn rate
+  description: Ticket on sustained payment burn rate (3x over 2h)
   condition:
-    kind: burn-rate
+    kind: multi-burn-rate
     op: gte
     threshold: 3
     lookbackWindow: 2h

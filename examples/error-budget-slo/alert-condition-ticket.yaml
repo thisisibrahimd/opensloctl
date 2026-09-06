@@ -6,7 +6,7 @@ spec:
   severity: ticket
   description: Ticket on sustained checkout error budget burn
   condition:
-    kind: burnrate
+    kind: burn-rate
     op: gte
     threshold: 3
     lookbackWindow: 2h

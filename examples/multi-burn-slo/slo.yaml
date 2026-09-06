@@ -1,0 +1,35 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: payment-availability
+spec:
+  description: Payment availability, 99.95% over a rolling 30-day window
+  service: payments
+  indicator:
+    metadata:
+      name: payment-availability-indicator
+    spec:
+      ratioMetric:
+        counter: true
+        good:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: sum(rate(payment_requests_total{status="success"}[{{.Window}}]))
+        total:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: sum(rate(payment_requests_total[{{.Window}}]))
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "99.95% payment success"
+      target: 0.9995
+  alertPolicies:
+    - alertPolicyRef: payment-page-36x-policy
+    - alertPolicyRef: payment-page-6x-policy
+    - alertPolicyRef: payment-ticket-3x-policy
+    - alertPolicyRef: payment-ticket-1x-policy

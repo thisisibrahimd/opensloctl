@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: payment-page-6x
+spec:
+  severity: page
+  description: Page on-call when payment burn rate stays elevated (6x over 30m)
+  condition:
+    kind: multi-burn-rate
+    op: gte
+    threshold: 6
+    lookbackWindow: 30m
+    alertAfter: 5m

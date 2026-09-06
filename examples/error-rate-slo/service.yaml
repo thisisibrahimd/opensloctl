@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: checkout
+  displayName: Checkout Service
+spec:
+  description: Checkout flow handling cart-to-order submission

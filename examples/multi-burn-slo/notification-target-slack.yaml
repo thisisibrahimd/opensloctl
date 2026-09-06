@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: AlertNotificationTarget
+metadata:
+  name: oncall-slack
+spec:
+  description: Notify #oncall-payments channel via Slack
+  target: slack

@@ -4,10 +4,10 @@ metadata:
   name: checkout-page
 spec:
   severity: page
-  description: Page when checkout error budget burns fast
+  description: Page on-call when checkout error rate exceeds the SLO threshold quickly
   condition:
-    kind: burn-rate
+    kind: error-rate
     op: gte
-    threshold: 14.4
+    threshold: 0.001
     lookbackWindow: 5m
     alertAfter: 2m
