@@ -11,25 +11,10 @@ attributes:
     stability: development
     brief: The OpenSlo API version of the SLO spec.
 
-  - key: openslo.objective.decimal
-    type: double
-    stability: development
-    brief: The SLO objective expressed as a decimal value (e.g., 0.999).
-
-  - key: openslo.objective.percent
-    type: double
-    stability: development
-    brief: The SLO objective expressed as a percentage (e.g., 99.9).
-
   - key: openslo.service.name
     type: string
     stability: development
     brief: The name of the service the SLO belongs to.
-
-  - key: openslo.timewindow.duration
-    type: string
-    stability: development
-    brief: The time window duration for the SLO (e.g., 28d).
 
   - key: openslo.alert.severity
     type: string
@@ -40,3 +25,27 @@ attributes:
     type: string
     stability: development
     brief: The notification target for an alert (e.g., pagerduty, slack, engineers).
+
+  - key: openslo.objective.decimal
+    type: double
+    stability: development
+    brief: The SLO objective expressed as a decimal value (e.g., 0.999).
+    deprecated:
+      reason: obsoleted
+      note: Unused in opensloctl; no recording rule emits this attribute. The objective value is baked into the openslo_slo_objective recording rule directly.
+
+  - key: openslo.objective.percent
+    type: double
+    stability: development
+    brief: The SLO objective expressed as a percentage (e.g., 99.9).
+    deprecated:
+      reason: obsoleted
+      note: Unused in opensloctl; no recording rule emits this attribute.
+
+  - key: openslo.timewindow.duration
+    type: string
+    stability: development
+    brief: The time window duration for the SLO (e.g., 28d).
+    deprecated:
+      reason: obsoleted
+      note: Unused in opensloctl; the time window is encoded as part of the SLI error rate windowed recording rules.
