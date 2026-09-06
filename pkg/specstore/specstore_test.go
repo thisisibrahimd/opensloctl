@@ -1435,3 +1435,96 @@ func BenchmarkGetSpecs(b *testing.B) {
 		_, _ = GetSpecs([]string{testdata}, false)
 	}
 }
+
+// TestValidateStatusThresholds exercises the per-SLO annotation validation
+// for threshold.status.openslo.com/{warning,critical,breached}. Each
+// annotation is optional; missing ones fall back to defaults. The triple
+// must be strictly ascending and positive.
+func TestValidateStatusThresholds(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		ann     map[string]string
+		wantErr bool
+	}{
+		{
+			name:    "all annotations absent → defaults 1/6/14.4 (valid)",
+			ann:     nil,
+		wantErr: false,
+		},
+		{
+			name: "all overrides valid ascending positive",
+			ann: map[string]string{
+				statusThresholdAnnotationWarning:  "2",
+				statusThresholdAnnotationCritical: "10",
+				statusThresholdAnnotationBreached: "20",
+			},
+			wantErr: false,
+		},
+		{
+			name: "partial override — only breached supplied",
+			ann: map[string]string{
+				statusThresholdAnnotationBreached: "50",
+			},
+			wantErr: false,
+		},
+		{
+			name: "non-numeric override falls back to default silently",
+			ann: map[string]string{
+				statusThresholdAnnotationWarning: "TODO",
+			},
+			wantErr: false,
+		},
+		{
+			name: "warning >= critical rejected",
+			ann: map[string]string{
+				statusThresholdAnnotationWarning:  "10",
+				statusThresholdAnnotationCritical: "5",
+			},
+			wantErr: true,
+		},
+		{
+			name: "critical >= breached rejected",
+			ann: map[string]string{
+				statusThresholdAnnotationCritical: "20",
+				statusThresholdAnnotationBreached: "10",
+			},
+			wantErr: true,
+		},
+		{
+			name: "warning == critical rejected (not strictly ascending)",
+			ann: map[string]string{
+				statusThresholdAnnotationWarning:  "5",
+				statusThresholdAnnotationCritical: "5",
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero threshold rejected",
+			ann: map[string]string{
+				statusThresholdAnnotationWarning: "0",
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative threshold rejected",
+			ann: map[string]string{
+				statusThresholdAnnotationCritical: "-5",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateStatusThresholds(tt.ann)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}

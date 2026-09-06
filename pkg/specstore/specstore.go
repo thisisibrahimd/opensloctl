@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/OpenSLO/go-sdk/pkg/openslo"
@@ -432,8 +433,75 @@ func (s *OpenSLOSpecs) ValidateRefs() error {
 		}
 	}
 
+	// validate SLO status threshold annotations
+	for name, slo := range s.V1.SLOs {
+		if err := validateStatusThresholds(slo.Metadata.Annotations); err != nil {
+			errs = append(errs, xerrors.Newf("invalid status thresholds on SLO %q: %v", name, err))
+		}
+	}
+
 	if len(errs) > 0 {
 		return xerrors.Join(errs)
+	}
+	return nil
+}
+
+// statusThresholdAnnotationKey{Warning,Critical,Breached} are the SLO
+// metadata.annotation keys that override the default status-gauge ranges
+// (defaults 1/6/14.4 per the Google SRE workbook). Used by both the
+// specstore validator and the generator/semconv docs.
+const (
+	statusThresholdAnnotationWarning  = "threshold.status.openslo.com/warning"
+	statusThresholdAnnotationCritical = "threshold.status.openslo.com/critical"
+	statusThresholdAnnotationBreached = "threshold.status.openslo.com/breached"
+)
+
+// statusThresholdDefaults mirror the SRE-workbook burn-rate reference
+// points used when no annotation override is supplied.
+const (
+	statusThresholdDefaultWarning   = 1.0
+	statusThresholdDefaultCritical  = 6.0
+	statusThresholdDefaultBreached  = 14.4
+)
+
+// parseStatusThreshold parses a status-threshold annotation value as a
+// float. Returns the default when the annotation is absent or empty.
+// Returns an error only when the value is non-empty but not parseable,
+// so a stray reminder note ("TODO: tune later") falls back to the
+// default silently instead of failing the load.
+func parseStatusThreshold(raw string, def float64) (float64, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return def, nil
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return def, nil
+	}
+	return v, nil
+}
+
+// validateStatusThresholds enforces the ascending-positive invariant on
+// the resolved (warning, critical, breached) triple. Each annotation is
+// optional; missing annotations fall back to defaults independently.
+func validateStatusThresholds(ann map[string]string) error {
+	warn, err := parseStatusThreshold(ann[statusThresholdAnnotationWarning], statusThresholdDefaultWarning)
+	if err != nil {
+		return xerrors.Newf("annotation %q: %v", statusThresholdAnnotationWarning, err)
+	}
+	crit, err := parseStatusThreshold(ann[statusThresholdAnnotationCritical], statusThresholdDefaultCritical)
+	if err != nil {
+		return xerrors.Newf("annotation %q: %v", statusThresholdAnnotationCritical, err)
+	}
+	breach, err := parseStatusThreshold(ann[statusThresholdAnnotationBreached], statusThresholdDefaultBreached)
+	if err != nil {
+		return xerrors.Newf("annotation %q: %v", statusThresholdAnnotationBreached, err)
+	}
+	if warn <= 0 || crit <= 0 || breach <= 0 {
+		return xerrors.Newf("warning=%g critical=%g breached=%g must all be positive", warn, crit, breach)
+	}
+	if !(warn < crit && crit < breach) {
+		return xerrors.Newf("warning=%g critical=%g breached=%g must be strictly ascending", warn, crit, breach)
 	}
 	return nil
 }
