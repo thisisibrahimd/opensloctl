@@ -128,6 +128,8 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 
 		// Pick and generate prom query
 		var promQuery string
+		var hasEventRate bool
+		var eventRateQuery string
 		if indicator.Spec.RatioMetric != nil {
 			goodSource := indicator.Spec.RatioMetric.Good.MetricSource
 			totalSource := indicator.Spec.RatioMetric.Total.MetricSource
@@ -142,6 +144,8 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			// success rate here would invert the meaning (a healthy service
 			// would register as burning thousands of times its budget).
 			promQuery = fmt.Sprintf("1 - (\n%s\n)\n/\n(\n%s\n)", goodQuery, totalQuery)
+			hasEventRate = true
+			eventRateQuery = totalQuery
 		} else {
 			metricSource := indicator.Spec.ThresholdMetric.MetricSource
 			if metricSource.Type != "Prometheus" {
@@ -156,6 +160,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 
 		// template out the window variable in prom query
 		var windowedPromQueries []*templates.WindowedPrometheusQuery
+		var windowedEventRateQueries []*templates.WindowedPrometheusQuery
 		for _, window := range templates.Windows {
 			windowData := &templates.WindowData{Window: window}
 
@@ -173,6 +178,21 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 				Query:  windowedPromQueryBuffer.String(),
 			}
 			windowedPromQueries = append(windowedPromQueries, windowedPromQuery)
+
+			// For RatioMetric SLIs, also build the event-rate recording rule
+			// query per window using the raw total counter query (no
+			// subtraction). Single line so no block scalar handling needed.
+			if hasEventRate {
+				rateTmpl := template.Must(template.New("event-rate-query").Parse(eventRateQuery))
+				var rateBuffer bytes.Buffer
+				if err := rateTmpl.Execute(&rateBuffer, windowData); err != nil {
+					return nil, fmt.Errorf("SLO %q: event rate template: %w", slo.Metadata.Name, err)
+				}
+				windowedEventRateQueries = append(windowedEventRateQueries, &templates.WindowedPrometheusQuery{
+					Window: window,
+					Query:  rateBuffer.String(),
+				})
+			}
 		}
 
 // extract days in time window
@@ -221,6 +241,8 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			OpensloVersion:            string(slo.APIVersion),
 			PrometheusQuery:           windowedPromQueries[0].Query,
 			WindowedPrometheusQueries: windowedPromQueries,
+			WindowedEventRateQueries:  windowedEventRateQueries,
+			HasEventRate:              hasEventRate,
 			Objective:                 objectiveFloat(slo.Spec.Objectives[0]),
 			IsMulti:                   multiFeatureEnabled,
 			MultiDimensionalLabel:     multiDimSliLabel,

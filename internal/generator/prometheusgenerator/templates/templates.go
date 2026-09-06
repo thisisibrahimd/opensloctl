@@ -55,8 +55,16 @@ type TemplateData struct {
 	OpensloVersion            string                     `json:"openslo_version"`
 	PrometheusQuery           string                     `json:"prometheus_query"`
 	WindowedPrometheusQueries []*WindowedPrometheusQuery `json:"windowed_prometheus_queries"`
-	Objective                 string                     `json:"objective"`
-	IsMulti                   bool                       `json:"is_multi"`
+	// WindowedEventRateQueries mirrors PromQueries but for the event-rate
+	// metric (events-per-second). Populated only for RatioMetric SLIs
+	// (see HasEventRate); ThresholdMetric SLIs skip event-rate entirely
+	// because the spec doesn't expose a parallel event-count query.
+	WindowedEventRateQueries []*WindowedPrometheusQuery `json:"windowed_event_rate_queries,omitempty"`
+	// HasEventRate gates the openslo_sli_event_rate_* rules in the
+	// template. False for ThresholdMetric SLIs.
+	HasEventRate bool `json:"has_event_rate"`
+	Objective    string `json:"objective"`
+	IsMulti      bool   `json:"is_multi"`
 	MultiDimensionalLabel     string                     `json:"multi_dimensional_label"`
 	TimeWindowDays            string                     `json:"time_window_days"`
 	// PeriodWindow is the multi-window key (e.g. "30d") used by the

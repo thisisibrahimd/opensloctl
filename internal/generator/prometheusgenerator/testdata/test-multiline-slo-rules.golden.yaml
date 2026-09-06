@@ -44,7 +44,7 @@ groups:
         openslo_spec_version: openslo/v1
         openslo_service_name: test-svc
     - record: openslo_slo_period_error_budget_remaining
-      expr: 1 - openslo_slo_period_burn_rate{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}
+      expr: clamp_min(1 - openslo_slo_period_burn_rate{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}, 0)
       labels:
         openslo_slo_name: test-multiline-slo
         openslo_spec_version: openslo/v1
@@ -157,6 +157,32 @@ groups:
           by (le)
         )
         
+      labels:
+        openslo_slo_name: test-multiline-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-svc
+  - name: openslo-status-recordings-test-multiline-slo
+    rules:
+    - record: openslo_slo_status
+      expr: |
+        (
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}} >= 14.4)
+          * 3
+        )
+        or
+        (
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}} >= 6)
+          and
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}} <  14.4)
+          * 2
+        )
+        or
+        (
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}} >= 1)
+          and
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-multiline-slo", openslo_spec_version="openslo/v1"}} <  6)
+          * 1
+        )
       labels:
         openslo_slo_name: test-multiline-slo
         openslo_spec_version: openslo/v1

@@ -116,6 +116,27 @@ groups:
         {{ $k }}: {{ $v }}
         {{- end }}
     {{- end }}
+    {{- if .HasEventRate }}
+    {{- range .WindowedEventRateQueries }}
+    - record: openslo_sli_event_rate_{{ .Window }}{{ if $.IsMulti }}_unlabeled{{end}}
+      expr: {{ if contains "\n" .Query }}|
+{{ .Query | indent 8 | trimSuffix "\n" }}{{ else }}{{ .Query }}{{ end }}
+      labels:
+        openslo_slo_name: {{ $.SloName }}
+        openslo_spec_version: {{ $.OpensloVersion }}
+        {{- range $k, $v := $.ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
+    {{- end }}
+    {{- if .IsMulti }}
+    {{- range .WindowedEventRateQueries }}
+    - record: openslo_sli_event_rate_{{ .Window }}
+      expr: label_join(openslo_sli_event_rate_{{ .Window }}_unlabeled{openslo_slo_name="{{ $.SloName }}", openslo_spec_version="{{ $.OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
+      labels:
+        openslo_spec_version: {{ $.OpensloVersion }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
     {{- if .IsMulti }}
     {{- range .WindowedPrometheusQueries }}
     - record: openslo_sli_error_rate_{{ .Window }}
