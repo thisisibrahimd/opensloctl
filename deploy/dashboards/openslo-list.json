@@ -1,0 +1,226 @@
+{
+  "uid": "openslo-list",
+  "title": "OpenSLO — Manage SLOs",
+  "tags": ["openslo"],
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-7d", "to": "now"},
+  "timezone": "",
+  "description": "All SLOs loaded by opensloctl. Click any row to drill into the per-SLO detail dashboard.",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {"selected": false, "text": "", "value": ""},
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "label": "Service",
+        "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+        "query": "label_values(openslo_slo_info, openslo_service_name)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {"selected": false, "text": "All", "value": "$__all"}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "All SLOs",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 30},
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "targets": [
+        {
+          "refId": "SLO",
+          "format": "table",
+          "instantQuery": true,
+          "expr": "label_replace(openslo_slo_info{openslo_service_name=~\"$service\"}, \"openslo_slo_name\", \"$1\", \"openslo_slo_name\", \"(.+)\")"
+        },
+        {
+          "refId": "OBJECTIVE",
+          "format": "table",
+          "instantQuery": true,
+          "expr": "openslo_slo_objective{openslo_service_name=~\"$service\"}"
+        },
+        {
+          "refId": "BUDGET",
+          "format": "table",
+          "instantQuery": true,
+          "expr": "openslo_slo_error_budget{openslo_service_name=~\"$service\"}"
+        },
+        {
+          "refId": "WINDOW",
+          "format": "table",
+          "instantQuery": true,
+          "expr": "openslo_slo_timewindow_days{openslo_service_name=~\"$service\"}"
+        },
+        {
+          "refId": "BURN",
+          "format": "table",
+          "instantQuery": true,
+          "expr": "openslo_slo_current_burn_rate{openslo_service_name=~\"$service\"}"
+        },
+        {
+          "refId": "REMAINING",
+          "format": "table",
+          "instantQuery": true,
+          "expr": "openslo_slo_period_error_budget_remaining{openslo_service_name=~\"$service\"}"
+        },
+        {
+          "refId": "STATUS",
+          "format": "table",
+          "instantQuery": true,
+          "expr": "openslo_slo_status{openslo_service_name=~\"$service\"}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Value #STATUS": false,
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "indexByName": {
+              "openslo_slo_name": 0,
+              "openslo_service_name": 1,
+              "Value #OBJECTIVE": 2,
+              "Value #WINDOW": 3,
+              "Value #BURN": 4,
+              "Value #REMAINING": 5,
+              "Value #STATUS": 6
+            },
+            "renameByName": {
+              "openslo_slo_name": "SLO",
+              "openslo_service_name": "Service",
+              "Value #OBJECTIVE": "Objective",
+              "Value #WINDOW": "Window days",
+              "Value #BURN": "Current burn (×)",
+              "Value #REMAINING": "Period remaining (%)",
+              "Value #STATUS": "Status"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "SLO": 0,
+              "Service": 1,
+              "Objective": 2,
+              "Window days": 3,
+              "Current burn (×)": 4,
+              "Period remaining (%)": 5,
+              "Status": 6
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Objective"},
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {"type": "gauge", "mode": "gradient", "valueDisplayMode": "text"}
+              }
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Period remaining (%)"},
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {"type": "gauge", "mode": "gradient", "min": 0, "max": 1, "valueDisplayMode": "text"}
+              }
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Current burn (×)"},
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {"type": "color-text", "mode": "continuous-GrYlRd", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "orange", "value": 6}, {"color": "red", "value": 14.4}]}}
+              }
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Status"},
+            "properties": [
+              {
+                "id": "mappings",
+                "value": {
+                  "type": "value",
+                  "options": {
+                    "0": {"text": "Healthy", "color": "green", "index": 0},
+                    "1": {"text": "Burning", "color": "yellow", "index": 1},
+                    "2": {"text": "Critical", "color": "orange", "index": 2},
+                    "3": {"text": "Breached", "color": "red", "index": 3}
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "SLO"},
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open detail",
+                    "url": "/d/openslo-detail?var-slo=${__data.fields.SLO}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showTableHead": true,
+        "sortBy": [{"displayName": "Current burn (×)", "desc": true}],
+        "sortIndex": 4,
+        "footer": {"show": false}
+      }
+    }
+  ]
+}
