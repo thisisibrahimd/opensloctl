@@ -49,6 +49,48 @@ metrics:
       - ref: openslo.spec.version
         requirement_level: required
 
+  - name: openslo.slo.current_burn_rate
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: Instantaneous error-budget burn rate = 5-minute SLI error rate divided by the error budget.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+      - ref: openslo.service.name
+        requirement_level: recommended
+
+  - name: openslo.slo.period_burn_rate
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: Period error-budget burn rate = full-window SLI error rate (typically 30d) divided by the error budget.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+      - ref: openslo.service.name
+        requirement_level: recommended
+
+  - name: openslo.slo.period_error_budget_remaining
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: Remaining error budget ratio over the full period = 1 minus period_burn_rate (1 = full budget remaining).
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+      - ref: openslo.service.name
+        requirement_level: recommended
+
   - name: openslo.sli.error_rate_5m
     instrument: gauge
     unit: "1"

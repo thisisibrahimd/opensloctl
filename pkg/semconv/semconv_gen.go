@@ -54,6 +54,9 @@ const (
 	// SLI error rate over a 7-day window.
 	METRIC_OPENSLO_SLI_ERROR_RATE_7D = "openslo.sli.error_rate_7d"
 
+	// Instantaneous error-budget burn rate = 5-minute SLI error rate divided by the error budget.
+	METRIC_OPENSLO_SLO_CURRENT_BURN_RATE = "openslo.slo.current_burn_rate"
+
 	// The error budget calculated as 1 minus the objective.
 	METRIC_OPENSLO_SLO_ERROR_BUDGET = "openslo.slo.error_budget"
 
@@ -62,6 +65,12 @@ const (
 
 	// The target SLI objective (e.g., 0.999 for 99.9% availability).
 	METRIC_OPENSLO_SLO_OBJECTIVE = "openslo.slo.objective"
+
+	// Period error-budget burn rate = full-window SLI error rate (typically 30d) divided by the error budget.
+	METRIC_OPENSLO_SLO_PERIOD_BURN_RATE = "openslo.slo.period_burn_rate"
+
+	// Remaining error budget ratio over the full period = 1 minus period_burn_rate (1 = full budget remaining).
+	METRIC_OPENSLO_SLO_PERIOD_ERROR_BUDGET_REMAINING = "openslo.slo.period_error_budget_remaining"
 
 	// The SLO time window duration expressed as a number of days.
 	METRIC_OPENSLO_SLO_TIMEWINDOW_DAYS = "openslo.slo.timewindow_days"
