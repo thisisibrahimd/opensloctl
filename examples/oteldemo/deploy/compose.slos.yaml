@@ -1,0 +1,27 @@
+services:
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/specs/prometheus-config.yaml
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --web.route-prefix=/
+      - --web.enable-otlp-receiver
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ../prometheus:/etc/prometheus/specs
+      - ../../rules:/etc/prometheus/rules
+
+  grafana:
+    ports:
+      - "3000:3000"
+    volumes:
+      # Bind the repo-root dashboards into Grafana's provisioning path.
+      # The file-provider.yaml inside this directory is wired to scan
+      # the same target.
+      - ../../dashboards:/etc/grafana/provisioning/dashboards
+
+  jaeger:
+    ports:
+      - "16686:16686"
+      - "4317:4317"
