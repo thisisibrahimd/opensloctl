@@ -3,10 +3,7 @@ package templates
 import _ "embed"
 
 //go:embed templates/prometheus-recording-rules.template.yaml
-var PrometheusRecordingRuleTemplate string
-
-//go:embed templates/prometheus-alert-rules.template.yaml
-var PrometheusAlertRuleTemplate string
+var PrometheusRulesTemplate string
 
 type WindowedPrometheusQuery struct {
 	Window string `json:"window"`
@@ -14,15 +11,38 @@ type WindowedPrometheusQuery struct {
 }
 
 type AlertCondition struct {
-	Expr     string `json:"expr"`
-	Severity string `json:"severity"`
+	Expr       string `json:"expr"`
+	Severity   string `json:"severity"`
+	Threshold  string `json:"threshold"`
+	Lookback   string `json:"lookback"`
+	AlertAfter string `json:"alert_after"`
 }
 
+// AlertTier groups conditions that share a tier name. Within a tier the
+// conditions are AND-combined; across tiers of the same severity, OR-combined.
+// For kinds that do not pair conditions (error-rate, burn-rate,
+// multi-burn-rate), each condition becomes its own tier so they're naturally
+// OR-combined.
+type AlertTier struct {
+	Conditions []AlertCondition `json:"conditions"`
+}
+
+// AlertGroup carries the per-severity alert data rendered into the
+// Prometheus rules template. KindPascal is the PascalCase form of the
+// OpenSlo condition kind (e.g. "multi-window-multi-burn-rate" →
+// "MultiWindowMultiBurnRate"). KindDescription is the lower-spaced form
+// used in alert summary annotations. SloNamePascal is the SLO's kebab-case
+// name with hyphens removed and each segment title-cased, so the rendered
+// alert name stays a single PascalCase identifier with no underscores.
 type AlertGroup struct {
-	Conditions  []AlertCondition `json:"conditions"`
-	For         string           `json:"for"`
-	Thresholds  string           `json:"thresholds"`
-	Lookbacks   string           `json:"lookbacks"`
+	Tiers           []AlertTier `json:"tiers"`
+	For             string      `json:"for"`
+	Thresholds      string      `json:"thresholds"`
+	Lookbacks       string      `json:"lookbacks"`
+	ThresholdLabel  string      `json:"threshold_label"`
+	KindPascal      string      `json:"kind_pascal"`
+	KindDescription string      `json:"kind_description"`
+	SloNamePascal   string      `json:"slo_name_pascal"`
 }
 
 type TemplateData struct {
@@ -34,7 +54,15 @@ type TemplateData struct {
 	IsMulti                   bool                       `json:"is_multi"`
 	MultiDimensionalLabel     string                     `json:"multi_dimensional_label"`
 	TimeWindowDays            string                     `json:"time_window_days"`
-	AlertGroups               map[string]AlertGroup      `json:"alert_groups"`
+	// PeriodWindow is the multi-window key (e.g. "30d") used by the
+	// period burn rate meta recording. Empty when no candidate exists
+	// (template then emits only current_burn_rate).
+	PeriodWindow string `json:"period_window"`
+	// ExtraLabels are OpenSlo metadata.labels converted into Prometheus
+	// labels (already 1-value validated). The {{ .ExtraLabels }} map can
+	// be ranged over to render `key: value` lines.
+	ExtraLabels map[string]string `json:"extra_labels"`
+	AlertGroups map[string]AlertGroup `json:"alert_groups"`
 }
 
 type WindowData struct {

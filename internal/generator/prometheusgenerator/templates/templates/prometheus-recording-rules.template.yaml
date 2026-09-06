@@ -1,5 +1,3 @@
-{{- define "slo_name"}}{{.SloName}}{{end}}
-{{- define "openslo_version"}}{{.OpensloVersion}}{{end}}
 groups:
   - name: openslo-info-recordings-{{ .SloName }}
     rules:
@@ -8,21 +6,65 @@ groups:
       labels:
         openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
+        {{- range $k, $v := .ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
     - record: openslo_slo_objective{{ if $.IsMulti }}_unlabled{{end}}
       expr: vector({{ .Objective }})
       labels:
         openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
+        {{- range $k, $v := .ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
     - record: openslo_slo_timewindow_days{{ if $.IsMulti }}_unlabled{{end}}
       expr: vector({{.TimeWindowDays}})
       labels:
         openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
+        {{- range $k, $v := .ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
     - record: openslo_slo_error_budget{{ if $.IsMulti }}_unlabled{{end}}
       expr: vector(1- {{.Objective}})
       labels:
         openslo_slo_name: {{ .SloName }}
         openslo_spec_version: {{ .OpensloVersion }}
+        {{- range $k, $v := .ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
+    - record: openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabled{{end}}
+      expr: |
+        openslo_sli_error_rate_5m{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+      labels:
+        openslo_slo_name: {{ .SloName }}
+        openslo_spec_version: {{ .OpensloVersion }}
+        {{- range $k, $v := .ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
+    {{- if .PeriodWindow }}
+    - record: openslo_slo_period_burn_rate{{ if $.IsMulti }}_unlabled{{end}}
+      expr: |
+        openslo_sli_error_rate_{{ .PeriodWindow }}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+      labels:
+        openslo_slo_name: {{ .SloName }}
+        openslo_spec_version: {{ .OpensloVersion }}
+        {{- range $k, $v := .ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
+    - record: openslo_slo_period_error_budget_remaining{{ if $.IsMulti }}_unlabled{{end}}
+      expr: 1 - openslo_slo_period_burn_rate{{ if $.IsMulti }}_unlabled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+      labels:
+        openslo_slo_name: {{ .SloName }}
+        openslo_spec_version: {{ .OpensloVersion }}
+        {{- range $k, $v := .ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
+    {{- end }}
     {{- if .IsMulti }}
     - record: openslo_slo_info
       expr: label_join(openslo_slo_info_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
@@ -40,22 +82,75 @@ groups:
       expr: label_join(openslo_slo_error_budget_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
       labels:
         openslo_spec_version: {{ .OpensloVersion }}
+    - record: openslo_slo_current_burn_rate
+      expr: |
+        label_join(openslo_sli_error_rate_5m_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+      labels:
+        openslo_spec_version: {{ .OpensloVersion }}
+    {{- if .PeriodWindow }}
+    - record: openslo_slo_period_burn_rate
+      expr: |
+        label_join(openslo_sli_error_rate_{{ .PeriodWindow }}_unlabeled{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+      labels:
+        openslo_spec_version: {{ .OpensloVersion }}
+    - record: openslo_slo_period_error_budget_remaining
+      expr: 1 - openslo_slo_period_burn_rate{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"}
+      labels:
+        openslo_spec_version: {{ .OpensloVersion }}
+    {{- end }}
     {{- end}}
   - name: openslo-sli-recordings-{{ .SloName }}
     rules:
     {{- range .WindowedPrometheusQueries }}
-    - record: openslo_sli_error_rate{{ .Window }}{{ if $.IsMulti }}_unlabeled{{end}}
+    - record: openslo_sli_error_rate_{{ .Window }}{{ if $.IsMulti }}_unlabeled{{end}}
       expr: {{ if contains "\n" .Query }}|
 {{ .Query | indent 8 | trimSuffix "\n" }}{{ else }}{{ .Query }}{{ end }}
       labels:
         openslo_slo_name: {{ $.SloName }}
         openslo_spec_version: {{ $.OpensloVersion }}
+        {{- range $k, $v := $.ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
     {{- end }}
     {{- if .IsMulti }}
     {{- range .WindowedPrometheusQueries }}
-    - record: openslo_sli_error_rate{{ .Window }}
-      expr: label_join(openslo_sli_error_rate{{ .Window }}_unlabeled{openslo_slo_name="{{ $.SloName }}", openslo_spec_version="{{ $.OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
+    - record: openslo_sli_error_rate_{{ .Window }}
+      expr: label_join(openslo_sli_error_rate_{{ .Window }}_unlabeled{openslo_slo_name="{{ $.SloName }}", openslo_spec_version="{{ $.OpensloVersion }}"}, 'openslo_slo_name', '-', 'openslo_slo_name', '{{$.MultiDimensionalLabel}}')
       labels:
         openslo_spec_version: {{ $.OpensloVersion }}
     {{- end }}
     {{- end }}
+  {{- if .AlertGroups }}
+  - name: openslo-alerts-{{ .SloName }}
+    rules:
+    {{- range $severity, $alertData := .AlertGroups }}
+    - alert: {{ $alertData.SloNamePascal }}{{ $alertData.KindPascal }}
+      expr: |-
+        {{- range $ti, $tier := $alertData.Tiers }}
+        {{- if $ti }}
+        or
+        {{- end }}
+        ({{- range $ci, $cond := $tier.Conditions }}
+        {{- if $ci }}
+        and
+        {{- end }}
+        {{ $cond.Expr -}}
+        {{- end }})
+        {{- end }}
+      for: {{ $alertData.For }}
+      labels:
+        severity: {{ $severity }}
+        openslo_slo_name: {{ $.SloName }}
+        openslo_spec_version: {{ $.OpensloVersion }}
+        {{- range $k, $v := $.ExtraLabels }}
+        {{ $k }}: {{ $v }}
+        {{- end }}
+      annotations:
+        summary: "{{ $severity | title }} {{ $alertData.KindDescription }} alert for SLO {{ $.SloName }}"
+        description: "Threshold {{ $alertData.Thresholds }} over {{ $alertData.Lookbacks }}"
+    {{- end }}
+  {{- end }}
