@@ -28,3 +28,6 @@ go.work.sum
 dist
 
 tmp/
+
+# Local opencode CLI config with MCP server env (per-developer)
+opencode.json
