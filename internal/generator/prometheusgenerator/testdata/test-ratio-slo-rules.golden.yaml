@@ -55,9 +55,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[5m]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[5m]))
         )
       labels:
@@ -68,9 +66,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[30m]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[30m]))
         )
       labels:
@@ -81,9 +77,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[1h]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[1h]))
         )
       labels:
@@ -94,9 +88,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[3h]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[3h]))
         )
       labels:
@@ -107,9 +99,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[6h]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[6h]))
         )
       labels:
@@ -120,9 +110,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[1d]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[1d]))
         )
       labels:
@@ -133,9 +121,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[3d]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[3d]))
         )
       labels:
@@ -146,9 +132,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[7d]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[7d]))
         )
       labels:
@@ -159,9 +143,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[28d]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[28d]))
         )
       labels:
@@ -172,9 +154,7 @@ groups:
       expr: |
         1 - (
         sum(rate(http_requests_total{status=~"2.."}[30d]))
-        )
-        /
-        (
+        ) / (
         sum(rate(http_requests_total[30d]))
         )
       labels:
@@ -246,21 +226,21 @@ groups:
     - record: openslo_slo_status
       expr: |
         (
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} >= 14.4)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} >= bool 14.4)
           * 3
         )
         or
         (
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} >= 6)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} >= bool 6)
           and
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} <  14.4)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} <  bool 14.4)
           * 2
         )
         or
         (
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} >= 1)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} >= bool 1)
           and
-          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} <  6)
+          (openslo_slo_current_burn_rate{openslo_slo_name="test-ratio-slo", openslo_spec_version="openslo/v1"} <  bool 6)
           * 1
         )
       labels:

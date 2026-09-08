@@ -143,7 +143,7 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 			// formulas downstream divide this by error_budget, so emitting the
 			// success rate here would invert the meaning (a healthy service
 			// would register as burning thousands of times its budget).
-			promQuery = fmt.Sprintf("1 - (\n%s\n)\n/\n(\n%s\n)", goodQuery, totalQuery)
+			promQuery = fmt.Sprintf("1 - (\n%s\n) / (\n%s\n)", goodQuery, totalQuery)
 			hasEventRate = true
 			eventRateQuery = totalQuery
 		} else {
