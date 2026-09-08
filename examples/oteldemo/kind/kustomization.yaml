@@ -1,0 +1,42 @@
+# Renders the opentelemetry-demo Helm chart's raw manifest, then
+# patches the pieces the chart doesn't expose via values:
+#   - mount the openslo-rules ConfigMap onto the prometheus
+#     Deployment so the rule files are reachable at
+#     /etc/prometheus/openslo-rules/.
+#
+# The other piece - appending `/etc/prometheus/openslo-rules/*.yaml`
+# to the chart's prometheus-rule_files list - is done in setup.sh
+# via `awk` after this kustomization builds. Kustomize v5 exposes
+# regex-style `pattern`+`replace` only as in-progress alpha and
+# doesn't have a stable API for it yet, so we keep the string-edit
+# step in shell where it lives cleanly.
+#
+# Driver: setup.sh runs
+#   helm template otel-demo ... > tmp/helm-rendered.yaml
+#   kustomize build examples/oteldemo/kind > tmp/manifest.yaml
+#   kubectl apply -f tmp/manifest.yaml
+#   # setup.sh then awk-injects the rule_files entry into the chart's
+#   # prometheus ConfigMap (idempotent).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../../tmp/helm-rendered.yaml
+
+patches:
+  - target:
+      kind: Deployment
+      name: prometheus
+    patch: |-
+      - op: add
+        path: /spec/template/spec/volumes/-
+        value:
+          name: openslo-rules
+          configMap:
+            name: openslo-rules
+      - op: add
+        path: /spec/template/spec/containers/0/volumeMounts/-
+        value:
+          name: openslo-rules
+          mountPath: /etc/prometheus/openslo-rules
+          readOnly: true
