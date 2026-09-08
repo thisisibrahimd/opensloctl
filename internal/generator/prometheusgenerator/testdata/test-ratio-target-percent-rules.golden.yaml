@@ -5,6 +5,7 @@ groups:
       expr: vector(1)
       labels:
         openslo_slo_name: test-ratio-target-percent
+        openslo_slo_description: "Test SLO with targetPercent instead of target"
         openslo_spec_version: openslo/v1
         openslo_service_name: test-svc
     - record: openslo_slo_objective

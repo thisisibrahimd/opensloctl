@@ -5,6 +5,7 @@ groups:
       expr: vector(1)
       labels:
         openslo_slo_name: test-tiered-slo
+        openslo_slo_description: "SLO with sloth-style 4 windows"
         openslo_spec_version: openslo/v1
         openslo_service_name: test-svc
     - record: openslo_slo_objective

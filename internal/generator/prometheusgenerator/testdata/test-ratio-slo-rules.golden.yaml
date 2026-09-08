@@ -5,6 +5,7 @@ groups:
       expr: vector(1)
       labels:
         openslo_slo_name: test-ratio-slo
+        openslo_slo_description: "Test SLO with RatioMetric (good over total)"
         openslo_spec_version: openslo/v1
         openslo_service_name: test-svc
     - record: openslo_slo_objective

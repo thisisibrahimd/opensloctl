@@ -5,6 +5,7 @@ groups:
       expr: vector(1)
       labels:
         openslo_slo_name: {{ .SloName }}
+        openslo_slo_description: "{{ .Description }}"
         openslo_spec_version: {{ .OpensloVersion }}
         {{- range $k, $v := .ExtraLabels }}
         {{ $k }}: {{ $v }}

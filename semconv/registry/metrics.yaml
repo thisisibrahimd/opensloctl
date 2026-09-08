@@ -10,6 +10,8 @@ metrics:
     attributes:
       - ref: openslo.slo.name
         requirement_level: required
+      - ref: openslo.slo.description
+        requirement_level: recommended
       - ref: openslo.spec.version
         requirement_level: required
 

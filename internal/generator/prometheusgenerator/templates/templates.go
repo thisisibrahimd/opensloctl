@@ -76,6 +76,12 @@ type TemplateData struct {
 	// be ranged over to render `key: value` lines.
 	ExtraLabels map[string]string `json:"extra_labels"`
 	AlertGroups map[string]AlertGroup `json:"alert_groups"`
+	// Description is the per-SLO `spec.description` text folded to a
+	// single line, whitespace-collapsed, capped at 200 chars, with
+	// `"` and `\` escaped so it's safe as a Prometheus label value.
+	// Empty descriptions still produce a label entry (with `""`)
+	// so every SLO's `openslo_slo_info` is consistently labelled.
+	Description string `json:"description"`
 	// StatusThresholds powers the openslo_slo_status gauge. Always
 	// provided — defaults fill in missing annotations independently
 	// per specstore.ParseStatusThreshold. The template currently emits

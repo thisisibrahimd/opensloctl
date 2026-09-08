@@ -236,8 +236,11 @@ func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile
 	}
 
 	// template out prom rules
+	descLabel := foldSloDescription(slo.Spec.Description)
+
 		tpldData := templates.TemplateData{
 			SloName:                   slo.Metadata.Name,
+			Description:               descLabel,
 			OpensloVersion:            string(slo.APIVersion),
 			PrometheusQuery:           windowedPromQueries[0].Query,
 			WindowedPrometheusQueries: windowedPromQueries,
@@ -604,6 +607,34 @@ func objectiveFloat(obj v1.SLOObjective) string {
 		return strconv.FormatFloat(math.Round(*obj.TargetPercent*100)/10000, 'f', -1, 64)
 	}
 	return "0"
+}
+
+// foldSloDescription prepares the per-SLO `spec.description` text for
+// emission as a Prometheus label value on the `openslo_slo_info`
+// recording rule. Pipeline:
+//   1. Replace every `\n` with a single space.
+//   2. Collapse runs of whitespace to one space.
+//   3. Trim leading/trailing whitespace.
+//   4. Cap at 200 chars; truncate with `…` if longer.
+//   5. Escape `\"` and `\` so the value survives YAML/PromQL quoting.
+//
+// Empty input still produces empty string. Every SLO carries the label
+// even when its description is gone, so downstream Grafana text panels
+// rendering ${description} get a stable row.
+func foldSloDescription(text string) string {
+	if text == "" {
+		return ""
+	}
+	out := strings.Join(strings.Fields(text), " ")
+	r := strings.NewReplacer(
+		`\`, `\\`,
+		`"`, `\"`,
+	)
+	out = r.Replace(out)
+	if len(out) > 200 {
+		out = out[:199] + "…"
+	}
+	return out
 }
 
 // appendIfMissing returns "a and b" when joining items for display. Empty

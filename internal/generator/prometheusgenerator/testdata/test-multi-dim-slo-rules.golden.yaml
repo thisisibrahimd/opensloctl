@@ -5,6 +5,7 @@ groups:
       expr: vector(1)
       labels:
         openslo_slo_name: test-multi-dim-slo
+        openslo_slo_description: "SLO expanded per service_name dimension via label_join"
         openslo_spec_version: openslo/v1
         openslo_service_name: test-multi-dim-svc
     - record: openslo_slo_objective_unlabeled

@@ -21,6 +21,9 @@ const (
 	// The name of the service the SLO belongs to.
 	ATTRIBUTE_OPENSLO_SERVICE_NAME = "openslo.service.name"
 
+	// The free-form description of the SLO as defined in the OpenSlo spec's `spec.description` field, folded to a single line.
+	ATTRIBUTE_OPENSLO_SLO_DESCRIPTION = "openslo.slo.description"
+
 	// The name of the SLO as defined in the OpenSlo spec.
 	ATTRIBUTE_OPENSLO_SLO_NAME = "openslo.slo.name"
 

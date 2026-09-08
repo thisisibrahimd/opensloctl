@@ -6,6 +6,11 @@ attributes:
     stability: development
     brief: The name of the SLO as defined in the OpenSlo spec.
 
+  - key: openslo.slo.description
+    type: string
+    stability: development
+    brief: The free-form description of the SLO as defined in the OpenSlo spec's `spec.description` field, folded to a single line.
+
   - key: openslo.spec.version
     type: string
     stability: development
