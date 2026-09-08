@@ -83,7 +83,7 @@ type TemplateData struct {
 	// so every SLO's `openslo_slo_info` is consistently labelled.
 	Description string `json:"description"`
 	// StatusThresholds powers the openslo_slo_status gauge. Always
-	// provided — defaults fill in missing annotations independently
+	// provided - defaults fill in missing annotations independently
 	// per specstore.ParseStatusThreshold. The template currently emits
 	// the status rule for every SLO; tightening to "only SLOs with
 	// alert policies" is a follow-up if non-monitored SLOs become a

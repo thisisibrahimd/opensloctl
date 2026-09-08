@@ -49,8 +49,8 @@ func NewPrometheusGenerator(specs *specstore.OpenSLOSpecs) generator.Generator {
 
 // Validate runs every generation-side check (indicator resolution, metric
 // source type, label grammar, template execution, alert group structure)
-// without writing any files. It reuses createGeneratedFiles — which returns
-// in-memory GeneratedFile records — and discards the rendered output. Any
+// without writing any files. It reuses createGeneratedFiles - which returns
+// in-memory GeneratedFile records - and discards the rendered output. Any
 // underlying error is returned to the caller untouched.
 func (g *PrometheusGenerator) Validate() error {
 	_, err := g.createGeneratedFiles()
@@ -89,7 +89,7 @@ func (g *PrometheusGenerator) Generate(outputDirectory string) error {
 
 // createGeneratedFiles renders SLOs to in-memory GeneratedFile records
 // without writing to disk. Each SLO produces one rules file named
-// "<slo-name>-rules.yaml" — recording rules always; alert rules added when
+// "<slo-name>-rules.yaml" - recording rules always; alert rules added when
 // at least one AlertPolicy resolves to a satisfied condition.
 //
 // The SLI source is unpacked per kind:
@@ -98,7 +98,7 @@ func (g *PrometheusGenerator) Generate(outputDirectory string) error {
 //
 // Query templates substitute {{.Window}} with each multi-window duration
 // (5m, 30m, 1h, 3h, 6h, 1d, 3d, 7d, 28d, 30d) at generate time. The
-// period burn-rate meta rules use "30d" by default — change PeriodWindow
+// period burn-rate meta rules use "30d" by default - change PeriodWindow
 // in templates.TemplateData to wire it differently.
 func (g *PrometheusGenerator) createGeneratedFiles() ([]*generator.GeneratedFile, error) {
 	var generatedPrometheusRuleFiles []*generator.GeneratedFile
