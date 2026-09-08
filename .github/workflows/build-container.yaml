@@ -6,41 +6,69 @@ on:
     types:
       - published
 
-permissions:
-  id-token: write
-  contents: write
+# Default-deny at workflow level; each job grants only what its steps
+# actually need.
+permissions: {}
 
 jobs:
-  goreleaser:
+  # Dev-dry-run release: validates the goreleaser pipeline runs clean
+  # against the PR head commit. PRs from forks do not have secrets and
+  # cannot push tags, so passing the workflow through here is safe.
+  snapshot:
+    name: dev dry-run release
+    if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # OIDC for cosign/skopa attestation if used later
+      contents: read   # checkout only - no tag writes on PR
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: stable
+          go-version: '1.26.x'
+          cache: true
 
-      - name: Dev Dry Run Release
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: goreleaser/goreleaser-action@v5
+      - name: Goreleaser snapshot
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
-          version: '~> v2'
           args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Production Release
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: goreleaser/goreleaser-action@v5
+  # Production release: publishes the staged cut only on pushed tags.
+  # contents: write is required for tag/version writes; id-token: write
+  # supports future signing actions. Snapshots above run on PRs and do
+  # not need either.
+  release:
+    name: production release
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.x'
+          cache: true
+
+      - name: Goreleaser release
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
-          version: '~> v2'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
