@@ -3,12 +3,12 @@
 package feature
 
 const (
-	// MULTI_DIMENSIONAL_SLI_DIMENSIONS — annotation listing the OpenSlo
+	// MULTI_DIMENSIONAL_SLI_DIMENSIONS - annotation listing the OpenSlo
 	// SLO dimension values to expand into separate Prometheus recording
 	// series.
 	MULTI_DIMENSIONAL_SLI_DIMENSIONS = "multi-dimensional-sli.openslo.com/dimensions"
 
-	// MULTI_DIMENSIONAL_SLI_LABEL — annotation naming the Prometheus label
+	// MULTI_DIMENSIONAL_SLI_LABEL - annotation naming the Prometheus label
 	// that carries each dimension value (joined into openslo_slo_id later).
 	MULTI_DIMENSIONAL_SLI_LABEL = "multi-dimensional-sli.openslo.com/label"
 )

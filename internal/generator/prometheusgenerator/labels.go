@@ -14,7 +14,7 @@ import (
 //   - Each OpenSlo Label must contain exactly one value. Lists with two or
 //     more entries are rejected (multi-value labels are not supported).
 //     Empty lists are skipped silently.
-//   - The single-string YAML form (`service: ad`) is accepted — the SDK
+//   - The single-string YAML form (`service: ad`) is accepted - the SDK
 //     normalizes it to a one-element slice.
 //   - Label names must match Prometheus's label name grammar
 //     ([a-zA-Z_][a-zA-Z0-9_]*). Hyphens are rejected because they are
