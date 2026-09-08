@@ -1,0 +1,95 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: burnrate-page-fast-5m-policy
+spec:
+  description: Page tier fast (5m window)
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: burnrate-page-fast-5m
+  notificationTargets:
+    - targetRef: engineers
+---
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: burnrate-page-fast-1h-policy
+spec:
+  description: Page tier fast (1h window) - pairs with 5m via AND in the alert
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: burnrate-page-fast-1h
+  notificationTargets:
+    - targetRef: engineers
+---
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: burnrate-page-slow-30m-policy
+spec:
+  description: Page tier slow (30m window)
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: burnrate-page-slow-30m
+  notificationTargets:
+    - targetRef: engineers
+---
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: burnrate-page-slow-6h-policy
+spec:
+  description: Page tier slow (6h window) - pairs with 30m via AND in the alert
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: burnrate-page-slow-6h
+  notificationTargets:
+    - targetRef: engineers
+---
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: burnrate-ticket-fast-2h-policy
+spec:
+  description: Ticket tier fast (2h window)
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: burnrate-ticket-fast-2h
+  notificationTargets:
+    - targetRef: engineers
+---
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: burnrate-ticket-fast-1d-policy
+spec:
+  description: Ticket tier fast (1d window) - pairs with 2h via AND in the alert
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: burnrate-ticket-fast-1d
+  notificationTargets:
+    - targetRef: engineers
+---
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: burnrate-ticket-slow-6h-policy
+spec:
+  description: Ticket tier slow (6h window)
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: burnrate-ticket-slow-6h
+  notificationTargets:
+    - targetRef: engineers
+---
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: burnrate-ticket-slow-3d-policy
+spec:
+  description: Ticket tier slow (3d window) - pairs with 6h via AND in the alert
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: burnrate-ticket-slow-3d
+  notificationTargets:
+    - targetRef: engineers

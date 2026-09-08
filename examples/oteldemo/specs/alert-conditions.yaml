@@ -1,0 +1,103 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: burnrate-page-fast-5m
+spec:
+  severity: page
+  condition:
+    kind: multi-window-multi-burn-rate
+    op: gte
+    threshold: 14.4
+    lookbackWindow: 5m
+    alertAfter: 2m
+---
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: burnrate-page-fast-1h
+spec:
+  severity: page
+  condition:
+    kind: multi-window-multi-burn-rate
+    op: gte
+    threshold: 14.4
+    lookbackWindow: 1h
+    alertAfter: 2m
+---
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: burnrate-page-slow-30m
+spec:
+  severity: page
+  condition:
+    kind: multi-window-multi-burn-rate
+    op: gte
+    threshold: 6
+    lookbackWindow: 30m
+    alertAfter: 5m
+---
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: burnrate-page-slow-6h
+spec:
+  severity: page
+  condition:
+    kind: multi-window-multi-burn-rate
+    op: gte
+    threshold: 6
+    lookbackWindow: 6h
+    alertAfter: 5m
+---
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: burnrate-ticket-fast-2h
+spec:
+  severity: ticket
+  condition:
+    kind: multi-window-multi-burn-rate
+    op: gte
+    threshold: 3
+    lookbackWindow: 2h
+    alertAfter: 15m
+---
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: burnrate-ticket-fast-1d
+spec:
+  severity: ticket
+  condition:
+    kind: multi-window-multi-burn-rate
+    op: gte
+    threshold: 3
+    lookbackWindow: 1d
+    alertAfter: 15m
+---
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: burnrate-ticket-slow-6h
+spec:
+  severity: ticket
+  condition:
+    kind: multi-window-multi-burn-rate
+    op: gte
+    threshold: 1
+    lookbackWindow: 6h
+    alertAfter: 30m
+---
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: burnrate-ticket-slow-3d
+spec:
+  severity: ticket
+  condition:
+    kind: multi-window-multi-burn-rate
+    op: gte
+    threshold: 1
+    lookbackWindow: 3d
+    alertAfter: 30m

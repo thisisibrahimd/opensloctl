@@ -1,0 +1,7 @@
+apiVersion: openslo/v1
+kind: AlertNotificationTarget
+metadata:
+  name: engineers
+spec:
+  description: On-call engineers (demo target - routing not implemented)
+  target: engineers
