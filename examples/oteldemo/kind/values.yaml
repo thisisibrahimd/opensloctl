@@ -1,0 +1,171 @@
+# Helm chart values for an OpenSLO flavored override of
+# open-telemetry/opentelemetry-demo.
+#
+# The chart's default values already enable anonymous Grafana admin
+# (grafana.grafana.ini.auth.anonymous.enabled: true), the Prom OTLP
+# receiver (`web.enable-otlp-receiver`), and the dashboard/alerts/
+# datasources sidecars. We re-add `web.enable-lifecycle` so Prom's
+# `/-/reload` endpoint accepts POSTs after `make generate` runs.
+prometheus:
+  server:
+    extraFlags:
+      - "enable-feature=exemplar-storage"
+      - "web.enable-otlp-receiver"
+      - "web.enable-lifecycle"
+      # NOTE: native histograms are on by default in Prometheus v3.x
+      # and `--enable-feature=native-histograms` is a documented no-op
+      # (Prom logs `option=native-histograms no-op` at startup). Storage
+      # accepts natively-produced histograms via the OTLP receiver without
+      # any extra flag, so we don't set it here.
+grafana:
+  resources:
+    limits:
+      memory: 1Gi
+  sidecar:
+    # Disabled: alerts. We manage alerts via Prometheus recording/alert
+    # rules directly (loaded via the openslo-rules ConfigMap).
+    alerts:
+      enabled: false
+    # Enabled: datasources. The chart ships a Prometheus datasource
+    # ConfigMap with the `${DS_PROMETHEUS}` UID our SLO dashboards
+    # reference. Without this sidecar every dashboard query resolves
+    # to nothing because no datasource exists.
+    datasources:
+      enabled: true
+  plugins: ["grafana-opensearch-datasource"]
+components:
+  # The upstream chart ships with 20Mi for several Node/Go services.
+  # Under load-generator traffic a few of them OOM-Kill almost
+  # immediately. We bump the worst offenders to 200Mi here.
+  checkout:
+    resources:
+      limits:
+        memory: 200Mi
+  currency:
+    resources:
+      limits:
+        memory: 200Mi
+  product-catalog:
+    resources:
+      limits:
+        memory: 200Mi
+  quote:
+    resources:
+      limits:
+        memory: 200Mi
+  shipping:
+    resources:
+      limits:
+        memory: 200Mi
+  load-generator:
+    # k6 virtual-user count for the front-end synthetic workload.
+    # The Helm chart's default is 5 (see chart `values.yaml` lines 639-640,
+    # `LOAD_GENERATOR_VUS`). Bumping raises ambient request volume,
+    # increasing pressure on customer-facing SLOs (ad-availability,
+    # cart-availability, recommendation-availability, payment-unreachable
+    # via cascade) without changing chaos-flag state.
+    env:
+      - name: LOAD_GENERATOR_VUS
+        value: "5"
+
+# Span-metrics connector: single classic bucket histogram.
+# Restores the upstream chart's default connector name (`span_metrics`)
+# so Prometheus sees one metric family for every distinct duration.
+# We DO NOT emit native (exponential) histograms: they have no
+# `_bucket{le=...}` series, which makes per-threshold SLO ratios
+# (good / total) impossible to compute - `histogram_quantile` only
+# recovers a single duration estimate per evaluation, not a fraction
+# of observations under a bound. The classic bucket stream keeps
+# `openslo_sli_error_rate_*` numerically truthful (continuous 0.0–1.0)
+# over 30-day windows.
+#
+# The namespace `traces.span.metrics` produces a Prometheus metric name
+# infix of `_span_metrics_`, e.g.
+# `traces_span_metrics_duration_milliseconds_bucket` and
+# `traces_span_metrics_calls_total`. The oteldemo chart's default
+# would emit the metrics as `spanmetrics_calls_total` /
+# `spanmetrics_duration_milliseconds`; we override the namespace so
+# the SLO specs can keep a stable, descriptive prefix.
+opentelemetry-collector:
+  config:
+    connectors:
+      span_metrics:
+        namespace: traces.span.metrics
+        histogram:
+          explicit:
+            buckets:
+              - "2ms"
+              - "4ms"
+              - "6ms"
+              - "8ms"
+              - "10ms"
+              - "50ms"
+              - "100ms"
+              - "200ms"
+              - "400ms"
+              - "800ms"
+              - "1s"
+              - "1400ms"
+              - "2s"
+              - "5s"
+              - "10s"
+              - "15s"
+              # `30s` covers the post-order-email-latency SLO threshold
+              # (`le="30000"`); `60s` covers the order-processing-latency
+              # SLO threshold (`le="60000"`). The metric suffix is
+              # `_milliseconds`, so the bucket durations above emit as
+              # `le="2"`, `le="2000"`, ..., `le="30000"`, `le="60000"`.
+              - "30s"
+              - "60s"
+              - "120s"
+              - "300s"
+        # Dimensions follow the latest OpenTelemetry semantic conventions
+        # (HTTP stable; messaging Development per
+        # https://opentelemetry.io/docs/specs/semconv/). Each entry below is
+        # declared as an additive dimension on every emitted metric stream
+        # from this connector - service.name + span.name + span.kind +
+        # status.code + collector.instance.id are already added by default,
+        # so we only list the opt-in attributes we need for SLO evaluation:
+        #   - http.response.status_code: fail/success split for HTTP SLOs.
+        #   - error.type: low-cardinality error class fallback when status
+        #     code isn't enough (e.g. timeout).
+        #   - messaging.destination.name: topic name for kafka-order-completion.
+        #   - messaging.operation.type: send/process/receive distinction.
+        #   - messaging.system: restricts to `kafka` for our messaging SLO.
+        #   - user_agent.synthetic.type: filters out bot/test synthetic
+        #     traffic from user-facing SLIs (load-generator emits
+        #     synthetic.type="test" by default; see
+        #     https://opentelemetry.io/docs/specs/semconv/registry/attributes/user-agent/).
+        # We deliberately skip user_agent.original (full UA strings =
+        # unbounded cardinality) and the high-cardinality message IDs,
+        # offsets, and partition IDs.
+        dimensions:
+          - name: http.response.status_code
+          - name: error.type
+          - name: messaging.destination.name
+          - name: messaging.operation.type
+          - name: messaging.system
+          - name: user_agent.synthetic.type
+
+    # Pipeline wiring matches the upstream chart's default. The chart
+    # hard-codes the connector token `span_metrics` (the factory alias)
+    # in both `service.pipelines.traces.exporters` and
+    # `service.pipelines.metrics.receivers`. We pass it through verbatim
+    # so the override is a no-op for collector wiring - only our custom
+    # namespace and dimensions change the metric names. Other pipeline
+    # members are reproduced exactly: memory_limiter → resourcedetection
+    # → resource → transform/sanitize_logs → gen_ai_normalizer for
+    # traces; receivers otlp, kafkametrics, span_metrics, prometheus/ad
+    # for metrics.
+    service:
+      pipelines:
+        traces:
+          processors: [memory_limiter, resourcedetection, resource, transform/sanitize_logs, gen_ai_normalizer]
+          exporters:  [otlp_grpc/jaeger, debug, span_metrics]
+        metrics:
+          receivers:  [otlp, kafkametrics, span_metrics, prometheus/ad]
+          processors: [memory_limiter, resourcedetection, resource]
+          exporters:  [otlp_http/prometheus, debug]
+        logs:
+          processors: [memory_limiter, resourcedetection, resource, transform/sanitize_logs]
+          exporters:  [opensearch, debug] 

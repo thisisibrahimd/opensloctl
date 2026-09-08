@@ -1,0 +1,39 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: test-tiered-slo
+spec:
+  description: SLO with sloth-style 4 windows
+  service: test-svc
+  indicator:
+    metadata:
+      name: test-tiered-sli
+    spec:
+      ratioMetric:
+        counter: true
+        good:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: sum(rate(http_requests_total{status=~"2.."}[{{.Window}}]))
+        total:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: sum(rate(http_requests_total[{{.Window}}]))
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "99.9%"
+      target: 0.999
+  alertPolicies:
+    - alertPolicyRef: tiered-page-fast-5m-policy
+    - alertPolicyRef: tiered-page-fast-1h-policy
+    - alertPolicyRef: tiered-page-slow-30m-policy
+    - alertPolicyRef: tiered-page-slow-6h-policy
+    - alertPolicyRef: tiered-ticket-fast-2h-policy
+    - alertPolicyRef: tiered-ticket-fast-1d-policy
+    - alertPolicyRef: tiered-ticket-slow-6h-policy
+    - alertPolicyRef: tiered-ticket-slow-3d-policy

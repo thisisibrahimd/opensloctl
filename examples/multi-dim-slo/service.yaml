@@ -1,0 +1,6 @@
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  description: API gateway shared across account, frontend, checkout

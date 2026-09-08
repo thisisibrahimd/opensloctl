@@ -1,0 +1,62 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: image-loading-latency
+  displayName: Image Loading Latency
+  labels:
+    chaos_flag: imageSlowLoad
+    service: image-provider
+spec:
+  service: image-provider
+  description: "95% of `image-provider` responses should complete under 2s, measured as the ratio of `le=\"2000\"` classic bucket counts to `_calls_total` on `service_name=\"image-provider\"` (target 0.95; trips on `imageSlowLoad`)."
+  indicator:
+    metadata:
+      name: image-loading-latency-sli
+    spec:
+      ratioMetric:
+        counter: true
+        good:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: |
+                sum(
+                  rate(
+                    traces_span_metrics_duration_milliseconds_bucket{
+                      service_name="image-provider",
+                      span_kind="SPAN_KIND_SERVER",
+                      span_name="image-provider",
+                      le="2000"
+                    }[{{.Window}}]
+                  )
+                )
+        total:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: |
+                sum(
+                  rate(
+                    traces_span_metrics_calls_total{
+                      service_name="image-provider",
+                      span_kind="SPAN_KIND_SERVER",
+                      span_name="image-provider"
+                    }[{{.Window}}]
+                  )
+                )
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  budgetingMethod: Occurrences
+  objectives:
+    - displayName: 95% of image-provider responses under 2s
+      target: 0.95
+  alertPolicies:
+    - alertPolicyRef: burnrate-page-fast-5m-policy
+    - alertPolicyRef: burnrate-page-fast-1h-policy
+    - alertPolicyRef: burnrate-page-slow-30m-policy
+    - alertPolicyRef: burnrate-page-slow-6h-policy
+    - alertPolicyRef: burnrate-ticket-fast-2h-policy
+    - alertPolicyRef: burnrate-ticket-fast-1d-policy
+    - alertPolicyRef: burnrate-ticket-slow-6h-policy
+    - alertPolicyRef: burnrate-ticket-slow-3d-policy

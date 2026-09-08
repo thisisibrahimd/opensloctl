@@ -1,0 +1,97 @@
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: ad
+  displayName: Ad Service
+spec:
+  description: >
+    Serves contextual advertisements on product pages. Generates ~10% of
+    frontend revenue via Google Ads integration.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: cart
+  displayName: Cart Service
+spec:
+  description: >
+    Manages shopping cart state. EmptyCart is the most user-visible call -
+    failure directly blocks users from starting a new session.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: checkout
+  displayName: Checkout Service
+spec:
+  description: >
+    Coordinates multi-service checkout flow via gRPC. Orchestrates cart,
+    payment, shipping, and order confirmation downstream via Kafka.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: email
+  displayName: Email Service
+spec:
+  description: >
+    Sends order confirmation emails. Loss here degrades trust without
+    blocking purchases.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: frontend
+  displayName: Frontend
+spec:
+  description: >
+    React-based product catalog UI. Load-bearing for user acquisition.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: frontend-proxy
+  displayName: Frontend Proxy
+spec:
+  description: >
+    Envoy edge proxy serving static frontend assets and product images.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: image-provider
+  displayName: Image Provider
+spec:
+  description: >
+    Go service that serves /image-provider/... images for product pages.
+    Latency here directly impacts page-load times.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: paymentservice
+  displayName: Payment Service
+spec:
+  description: >
+    Authoritative payment processor. Direct revenue impact - failures
+    cancel checkouts.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: productcatalogservice
+  displayName: Product Catalog Service
+spec:
+  description: >
+    Product data store. Cached after first request - failures hit only
+    the product detail page on cold load.
+---
+apiVersion: openslo/v1
+kind: Service
+metadata:
+  name: recommendationservice
+  displayName: Recommendation Service
+spec:
+  description: >
+    ML-driven "you may also like" product recommendations. Latent importance -
+    failures degrade but don't block core flow.

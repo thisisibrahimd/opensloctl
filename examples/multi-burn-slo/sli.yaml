@@ -1,0 +1,18 @@
+apiVersion: openslo/v1
+kind: SLI
+metadata:
+  name: payment-success-rate
+spec:
+  description: Fraction of payment requests that succeed
+  ratioMetric:
+    counter: true
+    good:
+      metricSource:
+        type: Prometheus
+        spec:
+          query: sum(rate(payment_requests_total{status="success"}[{{.Window}}]))
+    total:
+      metricSource:
+        type: Prometheus
+        spec:
+          query: sum(rate(payment_requests_total[{{.Window}}]))

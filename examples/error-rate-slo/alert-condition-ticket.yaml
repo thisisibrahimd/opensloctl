@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: checkout-ticket
+spec:
+  severity: ticket
+  description: Open a ticket when checkout error rate stays elevated over a longer window
+  condition:
+    kind: error-rate
+    op: gte
+    threshold: 0.005
+    lookbackWindow: 1h
+    alertAfter: 30m

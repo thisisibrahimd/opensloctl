@@ -1,505 +1,641 @@
 # opensloctl
 
-Generate Prometheus recording rules and alerting rules from OpenSlo specs.
+Generate Prometheus recording rules and alerting rules from OpenSLO specs.
 
-## Table of Contents
+> **Status: active development.** Output shapes, code paths, config conventions, and example layouts can change between minor versions. Pin a specific release if you're relying on it, and expect breaking changes. We're shipping toward a stable `1.0`; right now everything below the generator interface is honest engineering work, not a finished product.
+>
+> Releases: <https://github.com/thisisibrahimd/opensloctl/releases> - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 
-- [Installation](#installation)
-- [Development](#development)
-- [Commands](#commands)
-- [Usage](#usage)
-  - [Recording Rules](#recording-rules-slo-name-recording-rulesyaml)
-  - [Alert Rules](#alert-rules-slo-name-alert-rulesyaml)
-- [Burn Rate Alerts](#burn-rate-alerts)
-  - [How It Works](#how-it-works-1)
-  - [Example](#example-api-latency-slo-with-page--ticket-alerts)
-  - [Why Four Alert Conditions](#why-four-alert-conditions)
-  - [Creating AlertConditions](#creating-alertconditions)
-  - [Creating AlertPolicies](#creating-alertpolicies)
-  - [Linking to SLOs](#linking-to-slos)
-  - [Validation](#validation)
-  - [Run the Examples](#run-the-examples)
-- [Semantic Conventions](#semantic-conventions)
+## Contents
 
-## Installation
+- [1. Quick start](#1-quick-start)
+- [2. What gets generated](#2-what-gets-generated)
+- [3. Writing specs](#3-writing-specs)
+- [4. Alerting strategies](#4-alerting-strategies)
+  - [`error-rate` - SRE §§ 1-3](#error-rate--sre--s-s-1-3)
+  - [`burn-rate` - SRE § 4](#burn-rate--sre--s-4)
+  - [`multi-burn-rate` - SRE § 5](#multi-burn-rate--sre--s-5)
+  - [`multi-window-multi-burn-rate` - SRE § 6](#multi-window-multi-burn-rate--sre--s-6)
+  - [Choosing a strategy](#choosing-a-strategy)
+  - [Alert naming](#alert-naming)
+  - [Field reference](#field-reference)
+- [5. Multi-dimensional SLIs](#5-multi-dimensional-slis)
+- [6. Dashboards and integrity rules](#6-dashboards-and-integrity-rules)
+- [7. Examples](#7-examples)
+- [8. Semantic conventions](#8-semantic-conventions)
+- [9. Development](#9-development)
 
-### Via mise (GitHub backend)
+## 1. Quick start
 
-If you use [mise](https://mise.jdx.dev/), you can install opensloctl directly from GitHub releases:
+Install the binary, validate one of the shipped examples, generate rules, push them into a Prometheus config.
+
+### Install
 
 ```
+# via mise (pins the version in mise.toml)
 mise use github:thisisibrahimd/opensloctl
-```
 
-This adds the tool to your local `mise.toml` and installs the latest release binary. After that, `opensloctl` is available on your PATH within the project.
-
-### From source
-
-```
+# or from source
 go install github.com/thisisibrahimd/opensloctl@latest
 ```
 
-Or clone and build:
+### Validate, generate, ship
 
 ```
-git clone https://github.com/thisisibrahimd/opensloctl.git
-cd opensloctl
-go build -o opensloctl .
+# parses every spec under examples/api-latency-slo/, fails on bad refs or thresholds
+opensloctl validate -f examples/api-latency-slo
+
+# writes one rules file per SLO into output/
+rm -rf output/ && mkdir output/
+opensloctl generate -f examples/api-latency-slo -o output/
+ls output/
+# api-latency-rules.yaml
+
+# drop the file into Prometheus (rule_files: [./rules/*.yaml])
+opensloctl generate -f examples/api-latency-slo -o /etc/prometheus/rules/
+curl -X POST http://localhost:9090/-/reload
+
+# confirm the rules loaded
+curl -s http://localhost:9090/api/v1/rules | jq '.data.groups[] | .name | select(startswith("openslo-"))'
 ```
 
-## Development
+### Checkpoint
 
-This project uses [mise](https://mise.jdx.dev/) to manage tool versions (Go, golangci-lint, Weaver).
-
-### Install mise
-
-See [mise installation docs](https://mise.jdx.dev/getting-started.html).
-
-### Install project tools
-
-Once mise is installed, run this in the repo root:
+Pick the SLO and look up the categorical state:
 
 ```
-mise install
+curl -s 'http://localhost:9090/api/v1/query?query=openslo_slo_status' | jq
 ```
 
-This installs the exact versions declared in `mise.toml`:
-- **Go** 1.26
-- **golangci-lint** (latest)
-- **Weaver** (latest) — for semantic convention registry management
+A non-empty result with values in `{0, 1, 2, 3}` means the recording rules loaded and the SLI query resolved in your Prom. See [§2.2](#22-recording-rules) for the full set of generated metrics, [§2.3](#23-prom-3x-compatibility) for the one Prom 3.x subtlety that affects dashboards.
 
-After installing, commands like `go`, `golangci-lint`, and `weaver` are available automatically in the project directory.
+## 2. What gets generated
 
-## Commands
+One file per SLO, named `<slo-name>-rules.yaml`:
 
 ```
-go build -o opensloctl .          # build binary
-go run . load -f <file>           # parse and print OpenSlo specs
-go run . generate -f <file> -o <dir>  # generate Prometheus recording rules
-make semconv-generate             # regenerate semconv_gen.go from registry
-make semconv-check                # validate registry schema
-make lint                         # run golangci-lint
-make test                         # run go test ./...
-```
-
-## Usage
-
-opensloctl reads OpenSlo SLO, SLI, AlertCondition, and AlertPolicy specs and generates two types of Prometheus rule files:
-
-### Recording Rules (`<slo-name>-recording-rules.yaml`)
-
-For each SLO, opensloctl generates Prometheus recording rules that:
-
-1. **Expose SLO metadata** — `openslo_slo_info`, `openslo_slo_objective`, `openslo_slo_timewindow_days`, `openslo_slo_error_budget`
-2. **Pre-compute SLI error rates** — `openslo_sli_error_rate_5m`, `_30m`, `_1h`, `_2h`, `_6h`, `_1d`, `_3d`, `_7d`, `_28d`, `_30d`
-
-The SLI error rate metrics are computed from your Prometheus query with window variables templated in. For example, if your SLI query is:
-
-```promql
-histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[{{.Window}}])) by (le))
-```
-
-The generator produces a recording rule for each window:
-
-```yaml
 groups:
-  - name: openslo-sli-recordings-api-latency-slo
+  - name: openslo-sli-recordings-<slo-name>      # always present
     rules:
-    - record: openslo_sli_error_rate_5m
-      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[5m])) by (le))
-      labels:
-        openslo_slo_name: api-latency-slo
-    - record: openslo_sli_error_rate_30m
-      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[30m])) by (le))
-      labels:
-        openslo_slo_name: api-latency-slo
+      - openslo_slo_info, openslo_slo_objective, openslo_slo_timewindow_days,
+        openslo_slo_error_budget
+      - openslo_sli_error_rate_<window> for each window in the multi-window set
+      - openslo_sli_event_rate_<window>          # RatioMetric SLOs only
+      - openslo_slo_current_burn_rate, openslo_slo_period_burn_rate,
+        openslo_slo_period_error_budget_remaining
+  - name: openslo-sli-recordings-<slo-name>-unlabeled + label_join
+    rules:                                       # multi-dimensional SLOs only
+  - name: openslo-alerts-<slo-name>              # only when alertPolicies are referenced
+    rules: <one Prom alert per severity>
 ```
 
-Multiline queries are preserved using YAML block scalars (`|`):
+### 2.1 Recording rules
+
+| Metric | Type | What it carries |
+|---|---|---|
+| `openslo_slo_info` | gauge (=1) | Identity record for the SLO. Carries `openslo_slo_name`, `openslo_slo_description` (folded one-liner from spec), `openslo_service_name`, `openslo_spec_version`. Demo SLOs add `chaos_flag`. |
+| `openslo_slo_objective` | gauge | Spec target (e.g. 0.999 for 99.9%). |
+| `openslo_slo_timewindow_days` | gauge | Spec `timeWindow` expressed in days (e.g. 28 for 28d). |
+| `openslo_slo_error_budget` | gauge | `1 - objective`. (e.g. 0.001 for 99.9%). |
+| `openslo_sli_error_rate_<window>` | gauge | SLI error rate over the named window. Windows in the default set: `5m, 30m, 1h, 2h, 6h, 1d, 3d, 7d, 28d, 30d`. |
+| `openslo_sli_event_rate_<window>` | gauge (ratio only) | Events/sec over that window. Emitted only for `RatioMetric` SLOs since the spec exposes a `total` count query. |
+| `openslo_slo_current_burn_rate` | gauge | `sli_error_rate_5m / error_budget`. Instantaneous burn rate. |
+| `openslo_slo_period_burn_rate` | gauge | `sli_error_rate_<longest_window> / error_budget`. Period burn rate over the spec's `timeWindow`. |
+| `openslo_slo_period_error_budget_remaining` | gauge | `clamp_min(1 - period_burn_rate, 0)`. Bounded to `[0, 1]` so dashboards don't chart large negatives. |
+| `openslo_slo_status` | gauge | Categorical 0-3 health state. See below. |
+
+### 2.2 Status gauge
+
+`openslo_slo_status` is a single integer gauge per SLO, dashboard-friendly because one lookup replaces three threshold comparisons:
+
+| Value | Label | Trigger on `openslo_slo_current_burn_rate` |
+|-------|--------|---|
+| `0` | Healthy | `< warning` |
+| `1` | Burning | `warning <= x < critical` |
+| `2` | Critical | `critical <= x < breached` |
+| `3` | Breached | `>= breached` |
+
+Defaults follow Google SRE Workbook burn-rate reference points: **warning = 1x, critical = 6x, breached = 14.4x**. Override per-SLO via annotations:
 
 ```yaml
-    - record: openslo_sli_error_rate_5m
-      expr: |
-        histogram_quantile(0.99,
-          sum(rate(http_request_duration_seconds_bucket{job="api"}[5m])) by (le))
-```
-
-### Alert Rules (`<slo-name>-alert-rules.yaml`)
-
-When an SLO references AlertPolicies with burn rate conditions, opensloctl generates Prometheus alerting rules. Conditions with the same severity are OR-ed together into a single alert rule:
-
-```yaml
-groups:
-  - name: openslo-burnrate-alerts-api-latency-slo
-    rules:
-    - alert: OpenSLO_Page_BurnRate_api_latency_slo
-      expr: |-
-        openslo_sli_error_rate5m{openslo_slo_name="api-latency-slo"} / (1 - openslo_slo_objective{openslo_slo_name="api-latency-slo"}) gte 14.4
-        or
-        openslo_sli_error_rate30m{openslo_slo_name="api-latency-slo"} / (1 - openslo_slo_objective{openslo_slo_name="api-latency-slo"}) gte 6.0
-      for: 2m
-      labels:
-        severity: page
-        openslo_slo_name: api-latency-slo
-```
-
-## Burn Rate Alerts
-
-opensloctl supports generating Prometheus alerting rules from OpenSlo AlertCondition and AlertPolicy specs. Follow the [Google SRE Workbook multi-window multi-burn-rate](https://sre.google/workbook/alerting-on-slos/#6-multiwindow-multi-burn-rate-alerts) pattern.
-
-### How It Works
-
-1. Define **AlertConditions** with burn rate thresholds and windows
-2. Group them into **AlertPolicies** (one condition per policy)
-3. Reference policies from your **SLO** via `spec.alertPolicies[]`
-4. All refs must resolve — validation runs on load
-
-### Example: API Latency SLO with Page + Ticket Alerts
-
-```
-examples/api-latency-slo/
-├── service.yaml
-├── datasource.yaml
-├── sli.yaml                    # thresholdMetric: P99 latency
-├── alert-condition-page.yaml   # 14.4x burn rate, 5m window
-├── alert-condition-ticket.yaml # 3x burn rate, 2h window
-├── alert-policy-page.yaml      # page → pagerduty
-├── alert-policy-ticket.yaml    # ticket → slack
-├── notification-target-*.yaml
-└── slo.yaml                    # references both policies
-```
-
-### Why Four Alert Conditions
-
-The Google SRE Workbook recommends **four AlertConditions** per SLO — two for page severity and two for ticket severity. Each condition represents a different burn rate window, and conditions within the same severity are **OR-ed** together.
-
-```
-Page alerts fire if EITHER condition is true:
-  (14.4x burn rate over 5m)  OR  (6x burn rate over 30m)
-
-Ticket alerts fire if EITHER condition is true:
-  (3x burn rate over 2h)     OR  (1x burn rate over 6h)
-```
-
-This is the **multi-window multi-burn-rate** pattern. You need two windows per severity to:
-
-1. **Catch sudden spikes** — the fast window (5m at 14.4x) fires immediately when error rate spikes hard
-2. **Catch sustained degradation** — the slow window (30m at 6x) fires when error rate is moderately elevated for longer
-3. **Reduce false positives** — both windows must agree on the burn rate within their respective timeframes, but the OR means you get alerted if either window detects the problem
-
-The burn rate values are derived from the error budget math. For a 99.9% SLO (0.1% error budget):
-- **14.4x** burns through the 30-day budget in ~2 hours
-- **6x** burns through the 30-day budget in ~5 hours
-- **3x** burns through the 30-day budget in ~10 hours
-- **1x** burns through the 30-day budget in ~30 days (full budget exhaustion)
-
-### Creating AlertConditions
-
-Define all four conditions, one per file:
-
-```yaml
-# alert-condition-page-14x.yaml — fast page alert
-apiVersion: openslo/v1
-kind: AlertCondition
 metadata:
-  name: api-latency-page-14x
-spec:
-  severity: page
-  description: Page on-call when API latency burn rate spikes hard
-  condition:
-    kind: burnrate          # only "burnrate" is supported
-    op: gte                 # gte, lte, gt, lt
-    threshold: 14.4         # burn rate multiplier
-    lookbackWindow: 5m      # evaluation window
-    alertAfter: 2m          # Prometheus "for" duration (optional)
+  annotations:
+    threshold.status.openslo.com/warning: "1"
+    threshold.status.openslo.com/critical: "6"
+    threshold.status.openslo.com/breached: "14.4"
 ```
 
-```yaml
-# alert-condition-page-6x.yaml — slow page alert
-apiVersion: openslo/v1
-kind: AlertCondition
-metadata:
-  name: api-latency-page-6x
-spec:
-  severity: page
-  condition:
-    kind: burnrate
-    threshold: 6
-    lookbackWindow: 30m
-    alertAfter: 5m
-```
+Each annotation is optional; missing ones fall back to defaults independently. The resolved triple must be strictly ascending and positive; otherwise `opensloctl validate` exits 1. Scratch notes (`TODO`) don't fail validation - non-numeric values silently fall back.
 
-```yaml
-# alert-condition-ticket-3x.yaml — fast ticket alert
-apiVersion: openslo/v1
-kind: AlertCondition
-metadata:
-  name: api-latency-ticket-3x
-spec:
-  severity: ticket
-  condition:
-    kind: burnrate
-    threshold: 3
-    lookbackWindow: 2h
-    alertAfter: 15m
-```
+### 2.3 Prom 3.x compatibility
 
-```yaml
-# alert-condition-ticket-1x.yaml — slow ticket alert
-apiVersion: openslo/v1
-kind: AlertCondition
-metadata:
-  name: api-latency-ticket-1x
-spec:
-  severity: ticket
-  condition:
-    kind: burnrate
-    threshold: 1
-    lookbackWindow: 6h
-    alertAfter: 30m
-```
+Every comparison inside the status block uses the `bool` modifier (`>= bool 14.4`, `< bool 6`, etc.). Without `bool`, Prometheus >= 0.19.0 applies default filter semantics at scalar operators - `(burn_rate >= 14.4)` returns the LHS series unchanged instead of `0`/`1` - and the dashboard's `Healthy/Burning/Critical/Breached` mapping never matches. The `bool` modifier has been stable since Prom 0.19.0 (Oct 2015), so the rules work on every Prom version in practical use. Alert expressions deliberately do NOT use `bool` since there, filter semantics is what you want. Test coverage: `internal/generator/prometheusgenerator.TestStatusRuleUsesBoolModifier` regresses every status block for exactly 3 `>= bool` and 2 `<  bool`, and no `bool` survives into alert blocks.
 
-### How Conditions Are OR-ed
+### 2.4 Alert rules
 
-Conditions with the same `severity` are grouped together and combined with **OR** logic in the generated Prometheus alerting rules:
+When an SLO references `AlertPolicies`, opensloctl groups them by `severity` and emits one Prometheus alert per severity inside `openslo-alerts-<slo-name>`. The condition `kind` selects the strategy (see [§4](#4-alerting-strategies)). Severity stays in the `severity` label; the alert name is `{SloNamePascal}{KindPascal}` and is shared across severities for a given SLO+kind (Prometheus deduplicates same-name alerts within one group, so this is intentional).
 
-```yaml
-# Generated Prometheus alert rule for page severity
-- alert: openslo_slo_burn_rate
-  expr: |
-    (
-      openslo_sli_error_rate_5m{openslo_slo_name="api-latency-slo"} > 14.4 * openslo_slo_error_budget{openslo_slo_name="api-latency-slo"}
-    )
-    or
-    (
-      openslo_sli_error_rate_30m{openslo_slo_name="api-latency-slo"} > 6 * openslo_slo_error_budget{openslo_slo_name="api-latency-slo"}
-    )
-  for: 2m
-  labels:
-    openslo_slo_name: api-latency-slo
-    severity: page
-```
+Alert name length grows with the SLO name. `PostOrderEmailLatencySloMultiWindowMultiBurnRate` is 49 characters - well under the typical 63-byte Prometheus label-value cap, but a reason to keep SLO names short if you also rely on `ALERTS{alertname=...}` lookups.
 
-Each severity gets its own alert rule. The page rule ORs both page conditions together. The ticket rule ORs both ticket conditions together. This means:
-- If **either** the 5m or 30m window exceeds its threshold → page fires
-- If **either** the 2h or 6h window exceeds its threshold → ticket fires
+## 3. Writing specs
 
-### Creating AlertPolicies
+OpenSlo specs are declarative YAML. opensloctl reads them and emits Prometheus rules; validation happens at load and at generate.
 
-The OpenSlo SDK enforces exactly 1 condition per AlertPolicy. So you need 4 policies — one per condition. The **OR-ing happens at the Prometheus alert rule level**, not in the OpenSlo spec.
-
-```yaml
-# alert-policy-page-14x.yaml
-apiVersion: openslo/v1
-kind: AlertPolicy
-metadata:
-  name: api-latency-page-14x-alert
-spec:
-  description: Page alert for 14.4x burn rate
-  alertWhenBreaching: true
-  conditions:
-    - conditionRef: api-latency-page-14x
-  notificationTargets:
-    - targetRef: oncall-pagerduty
-```
-
-Repeat for the other three conditions (page-6x, ticket-3x, ticket-1x). Each gets its own policy file.
-
-### How Conditions Are OR-ed
-
-The generator groups conditions by `severity` and creates **one Prometheus alert rule per severity** with OR logic:
-
-```yaml
-# Generated: page alert rule (ORs page-14x and page-6x)
-- alert: openslo_slo_burn_rate
-  expr: |
-    (
-      openslo_sli_error_rate_5m{openslo_slo_name="api-latency-slo"} > 14.4 * openslo_slo_error_budget{openslo_slo_name="api-latency-slo"}
-    )
-    or
-    (
-      openslo_sli_error_rate_30m{openslo_slo_name="api-latency-slo"} > 6 * openslo_slo_error_budget{openslo_slo_name="api-latency-slo"}
-    )
-  for: 2m
-  labels:
-    openslo_slo_name: api-latency-slo
-    severity: page
-
-# Generated: ticket alert rule (ORs ticket-3x and ticket-1x)
-- alert: openslo_slo_burn_rate
-  expr: |
-    (
-      openslo_sli_error_rate_2h{openslo_slo_name="api-latency-slo"} > 3 * openslo_slo_error_budget{openslo_slo_name="api-latency-slo"}
-    )
-    or
-    (
-      openslo_sli_error_rate_6h{openslo_slo_name="api-latency-slo"} > 1 * openslo_slo_error_budget{openslo_slo_name="api-latency-slo"}
-    )
-  for: 15m
-  labels:
-    openslo_slo_name: api-latency-slo
-    severity: ticket
-```
-
-Page fires if **either** 5m@14.4x **or** 30m@6x fires. Ticket fires if **either** 2h@3x **or** 6h@1x fires.
-
-Notification targets:
-
-```yaml
-apiVersion: openslo/v1
-kind: AlertNotificationTarget
-metadata:
-  name: oncall-pagerduty
-spec:
-  description: Page on-call engineer via PagerDuty
-  target: pagerduty
-```
-
-### Linking to SLOs
-
-Reference alert policies from your SLO:
+### 3.1 Minimal SLO with inline SLI
 
 ```yaml
 apiVersion: openslo/v1
 kind: SLO
 metadata:
-  name: api-latency-slo
+  name: api-latency
 spec:
   service: api-gateway
-  indicatorRef: api-latency-p99
+  indicator:
+    metadata:
+      name: api-gateway-latency-sli
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: Prometheus
+          spec:
+            query: histogram_quantile(0.999, sum(rate(http_request_duration_seconds_bucket{job="api-gateway"}[{{.Window}}])) by (le))
   budgetingMethod: Occurrences
   timeWindow:
     - duration: 30d
       isRolling: true
   objectives:
-    - displayName: "P99 latency < 500ms"
+    - displayName: "P99 latency under 500ms"
       target: 0.999
-      op: lte
-      value: 500
-  alertPolicies:
-    - alertPolicyRef: api-latency-page-alert
-    - alertPolicyRef: api-latency-ticket-alert
 ```
 
-### Inline Conditions and Targets
+The `Service` definition can be inline (`spec.service: api-gateway`) or referenced (`spec.serviceRef`). Indicator definitions can be inline (`spec.indicator`) or referenced (`spec.indicatorRef`). Each SLO's spec author owns the 0-1 shape of the SLI - opensloctl passes PromQL through verbatim, so `thresholdMetric` queries must already return 0/1 per cycle (or `ratioMetric` must give a [0,1] fraction in the multi-window). Use `ratioMetric(counter=true)` when you can express good/total via classic bucket + calls series.
 
-You can inline conditions and notification targets directly in the AlertPolicy instead of using refs:
+### 3.2 Multi-line queries
+
+`{{.Window}}` is templated per recording-window. Multiline queries are preserved using YAML block scalars (`|`):
+
+```yaml
+- record: openslo_sli_error_rate_5m
+  expr: |
+    histogram_quantile(0.999,
+      sum(rate(http_request_duration_seconds_bucket{job="api-gateway"}[5m])) by (le))
+```
+
+### 3.3 AlertCondition + AlertPolicy + SLO wiring
 
 ```yaml
 apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: api-latency-page
+spec:
+  severity: page
+  condition:
+    kind: burn-rate
+    op: gte
+    threshold: 14.4
+    lookbackWindow: 5m
+    alertAfter: 2m           # optional -> Prom `for:`
+---
+apiVersion: openslo/v1
 kind: AlertPolicy
 metadata:
-  name: api-latency-page-alert
+  name: api-latency-page
 spec:
-  description: Page alert for API latency burn rate
+  description: Page tier (5m window)
   alertWhenBreaching: true
   conditions:
-    - kind: AlertCondition
-      metadata:
-        name: api-latency-page
-      spec:
-        severity: page
-        condition:
-          kind: burnrate
-          threshold: 14.4
-          lookbackWindow: 5m
-          alertAfter: 2m
+    - conditionRef: api-latency-page   # exactly one; SDK enforces this
   notificationTargets:
-    - kind: AlertNotificationTarget
-      metadata:
-        name: oncall-pagerduty
-      spec:
-        target: pagerduty
+    - targetRef: oncall-pagerduty
 ```
 
-### Validation
+Then on the SLO:
 
-All references are validated on load. If any ref cannot be resolved, you get an error listing all missing refs:
+```yaml
+spec:
+  ...
+  alertPolicies:
+    - alertPolicyRef: api-latency-page
+    - alertPolicyRef: api-latency-ticket
+```
+
+OpenSLO SDK v0.9.2 enforces `SliceLength(1,1)` on `AlertPolicy.Spec.Conditions`. Use multiple AlertPolicies (one per condition) to orchestrate OR/AND across tiers and windows.
+
+### 3.4 Validation
+
+opensloctl fails fast on load and on generate. Validation rejects:
+
+- Unknown `condition.kind` values
+- `error-rate` thresholds outside `(0, 1]`
+- `burn-rate`, `multi-burn-rate`, `multi-window-multi-burn-rate` thresholds <= 0
+- `multi-burn-rate` with fewer than 2 conditions per severity
+- `multi-window-multi-burn-rate` with fewer than 2 tiers per severity
+- `multi-window-multi-burn-rate` tier with only 1 condition (need short+long pair)
+- `multi-window-multi-burn-rate` tier with non-matching thresholds across conditions
+- `multi-window-multi-burn-rate` condition name that doesn't end in `-<lookbackWindow>`
+- Unresolved refs anywhere in the SLO -> AlertPolicy -> AlertCondition -> AlertNotificationTarget graph
+- Label names containing hyphens (Prometheus requires `[a-zA-Z_][a-zA-Z0-9_]*` - use underscores)
+- Multi-value labels (more than one entry per label key)
+
+Ref errors look like:
 
 ```
-unresolved references: [unresolved ref: SLO "api-latency-slo" references Service "missing-svc" not found]
+unresolved references: [unresolved ref: SLO "api-latency" references Service "missing-svc" not found]
 ```
 
-The CLI also validates:
-- Each spec passes SDK validation (required fields, value ranges)
-- AlertCondition `kind` must be `burnrate`
-- AlertPolicy must have exactly 1 condition
+and exit 1. A separate `loadSpecs` hardening in `pkg/specstore/loadSpecs` also `slog.Warn`s every file that fails to decode, so silent skips are gone - `make verify` or any `validate` run surfaces every off-shape file.
 
-### Run the Examples
+## 4. Alerting strategies
 
-```bash
-# Load and validate the API latency SLO
-opensloctl load -r -f examples/api-latency-slo
+opensloctl generates Prometheus alerting rules from OpenSlo AlertCondition and AlertPolicy specs. The condition's `kind` picks one of four strategies inspired by the [Google SRE Workbook alerting on SLOs](https://sre.google/workbook/alerting-on-slos/) chapters. Pick the one that matches how aggressively you want to be paged.
 
-# Load and validate the checkout availability SLO
-opensloctl load -r -f examples/error-budget-slo
+Indicators can be inlined on the SLO (`spec.indicator: ...`) or referenced via `spec.indicatorRef` - referenced SLIs are resolved at generation time and treated as if they were inlined. Inline takes precedence when both are set.
 
-# Generate recording rules + alert rules
-opensloctl generate -r -f examples/api-latency-slo -o output/
+> The OpenSLO SDK only models the legacy `burnrate` kind. opensloctl accepts the four kebab-case names above plus `burnrate` for back-compat; `burnrate` is mapped to `multi-window-multi-burn-rate` with a one-shot warning at generation time.
+
+### Choosing a strategy
+
+| Kind | SRE workbook | Used for |
+|---|---|---|
+| `error-rate` | §§ 1-3 | Raw SLI error rate vs an absolute threshold (e.g. 0.001 for a 99.9% SLO). One alert per severity; simplest possible setup. |
+| `burn-rate` | § 4 | Single-window burn rate multiplier over the error budget. One alert per severity. |
+| `multi-burn-rate` | § 5 | Two or more burn rate windows OR-ed. Each condition contributes one expression; no short/long pairing. |
+| `multi-window-multi-burn-rate` | § 6 | Short+long window pairs AND-ed within a tier, OR-ed across tiers. Recommended when you can afford two windows per tier. |
+
+### `error-rate` - SRE §§ 1-3
+
+Compares the SLI error rate directly to an absolute threshold. Cheap to write - one condition per severity, no tiering.
+
+```yaml
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: api-latency-page
+spec:
+  severity: page
+  condition:
+    kind: error-rate
+    op: gte
+    threshold: 0.001         # 1 - 0.999 for a 99.9% SLO
+    lookbackWindow: 5m
+    alertAfter: 2m
+```
+
+Generates:
+
+```yaml
+- alert: ApiLatencyErrorRate
+  expr: openslo_sli_error_rate_5m{openslo_slo_name="api-latency"} >= 0.001000
+  for: 2m
+  labels:
+    severity: page
+    openslo_slo_name: api-latency
+```
+
+### `burn-rate` - SRE § 4
+
+Single-window burn rate multiplier over the error budget. One alert per severity; the simplest meaningful burn alert.
+
+```yaml
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: checkout-page
+spec:
+  severity: page
+  condition:
+    kind: burn-rate
+    op: gte
+    threshold: 14.4
+    lookbackWindow: 5m
+    alertAfter: 2m
+```
+
+Generates:
+
+```yaml
+- alert: CheckoutBurnRate
+  expr: openslo_sli_error_rate_5m{openslo_slo_name="checkout"} / (1 - openslo_slo_objective{openslo_slo_name="checkout"}) >= 14.400000
+  for: 2m
+  labels:
+    severity: page
+    openslo_slo_name: checkout
+```
+
+### `multi-burn-rate` - SRE § 5
+
+Two or more burn rate windows OR-ed per severity. No short/long AND pairing - each condition contributes one expression and the alert fires when any condition fires.
+
+```yaml
+# alert-condition-page-36x.yaml
+- severity: page
+  condition:
+    kind: multi-burn-rate
+    threshold: 36
+    lookbackWindow: 5m
+---
+# alert-condition-page-6x.yaml
+- severity: page
+  condition:
+    kind: multi-burn-rate
+    threshold: 6
+    lookbackWindow: 30m
+```
+
+Generates (conditions OR-ed per severity):
+
+```yaml
+- alert: ApiLatencyMultiBurnRate
+  expr: |-
+    (openslo_sli_error_rate_5m{openslo_slo_name="api-latency"} / (1 - openslo_slo_objective{openslo_slo_name="api-latency"}) >= 36.000000)
+    or
+    (openslo_sli_error_rate_30m{openslo_slo_name="api-latency"} / (1 - openslo_slo_objective{openslo_slo_name="api-latency"}) >= 6.000000)
+  labels:
+    severity: page
+    openslo_slo_name: api-latency
+```
+
+Structural rule: each severity needs >= 2 conditions. If you only want one threshold, use `burn-rate` instead.
+
+### `multi-window-multi-burn-rate` - SRE § 6
+
+Short + long window pairs AND-ed within a tier, OR-ed across tiers. The fast/slow tiered setup is what the workbook recommends for production.
+
+```yaml
+# Tier 1: fast burn - catches a sudden spike
+- name: page-fast-5m      # tier "page-fast" (strip "-5m" suffix)
+  severity: page
+  condition:
+    kind: multi-window-multi-burn-rate
+    threshold: 14.4
+    lookbackWindow: 5m
+    alertAfter: 2m
+- name: page-fast-1h      # tier "page-fast" (strip "-1h" suffix)
+  severity: page
+  condition:
+    kind: multi-window-multi-burn-rate
+    threshold: 14.4        # same threshold as 5m
+    lookbackWindow: 1h
+    alertAfter: 2m
+
+# Tier 2: slow burn - catches sustained degradation
+- name: page-slow-30m     # tier "page-slow"
+  severity: page
+  condition:
+    kind: multi-window-multi-burn-rate
+    threshold: 6
+    lookbackWindow: 30m
+    alertAfter: 5m
+- name: page-slow-6h      # tier "page-slow"
+  severity: page
+  condition:
+    kind: multi-window-multi-burn-rate
+    threshold: 6
+    lookbackWindow: 6h
+    alertAfter: 5m
+```
+
+Generates (AND in tier, OR across tiers):
+
+```yaml
+- alert: ApiLatencyMultiWindowMultiBurnRate
+  expr: |-
+    (
+    openslo_sli_error_rate_5m{openslo_slo_name="api-latency"} / (1 - openslo_slo_objective{openslo_slo_name="api-latency"}) >= 14.400000
+    and
+    openslo_sli_error_rate_1h{openslo_slo_name="api-latency"} / (1 - openslo_slo_objective{openslo_slo_name="api-latency"}) >= 14.400000)
+    or
+    (
+    openslo_sli_error_rate_30m{openslo_slo_name="api-latency"} / (1 - openslo_slo_objective{openslo_slo_name="api-latency"}) >= 6.000000
+    and
+    openslo_sli_error_rate_6h{openslo_slo_name="api-latency"} / (1 - openslo_slo_objective{openslo_slo_name="api-latency"}) >= 6.000000)
+  for: 2m
+  labels:
+    severity: page
+    openslo_slo_name: api-latency
+```
+
+Structural rules:
+
+- >= 2 tiers per severity (fast + slow, or any other split)
+- >= 2 conditions per tier (short + long window) sharing the same threshold
+- Condition names must end in `-<lookbackWindow>` so the generator can derive the tier. `page-fast-5m` and `page-fast-1h` both belong to tier `page-fast` and get AND-ed. Renaming either breaks the pairing.
+
+Burn rate exhaustion at common SLO targets:
+
+| Burn | 99.9% SLO (0.1% budget) | 95% SLO (5% budget) |
+|---|---|---|
+| 14.4x | ~2 hours | ~3.3 days |
+| 6x   | ~5 hours | ~8.3 days |
+| 3x   | ~10 hours | ~16.7 days |
+| 1x   | ~30 days (full period) | ~30 days (full period) |
+
+### Alert naming
+
+Names are PascalCase with no separators: `{SloNamePascal}{KindPascal}`.
+
+| Kind | Example alert name |
+|---|---|
+| `error-rate` | `AdAvailabilityErrorRate` |
+| `burn-rate` | `CheckoutBurnRate` |
+| `multi-burn-rate` | `ApiLatencyMultiBurnRate` |
+| `multi-window-multi-burn-rate` | `AdAvailabilityMultiWindowMultiBurnRate` |
+
+All alerts for one SLO go to a single record group `openslo-alerts-<slo-name>`. Severity is carried in the `severity` label, not the name - different severities coexist in the same group under the same alert name (Prometheus requires unique names within one group, the convention is to differentiate by `severity`).
+
+### Field reference
+
+| Field | Required | Where | Notes |
+|---|---|---|---|
+| `kind` | yes | `spec.condition.kind` | One of `error-rate`, `burn-rate`, `multi-burn-rate`, `multi-window-multi-burn-rate` (legacy `burnrate` accepted) |
+| `op` | yes | `spec.condition.op` | `gte` / `gt` / `lte` / `lt`. Defaults to `gte`. Operator is non-strict by default (`gte` means `>=`); switch to `gt` if your math requires strict. |
+| `threshold` | yes | `spec.condition.threshold` | Absolute (error-rate, must be in `(0, 1]`) or burn multiplier (burn-rate families, must be `> 0`) |
+| `lookbackWindow` | yes | `spec.condition.lookbackWindow` | Window duration (e.g. `5m`, `1h`, `6h`) |
+| `alertAfter` | no | `spec.condition.alertAfter` | Maps to Prom `for:` |
+| `severity` | yes | `spec.severity` | `page`, `ticket`, or any custom string (carried in the alert label) |
+
+## 5. Multi-dimensional SLIs
+
+Use this when you want one SLO to drive many parallel alert series - one per value of a chosen Prometheus label.
+
+Set two annotations on the SLO's `metadata.annotations`:
+
+| Annotation | Required | Role |
+|---|---|---|
+| `multi-dimensional-sli.openslo.com/label` | yes | The Prometheus label whose value is joined into `openslo_slo_name` to produce one series per value |
+| `multi-dimensional-sli.openslo.com/dimensions` | info only | Human-readable list of dimension values; not consumed by the generator |
+
+When both annotations are set, the generator emits two layers of recording rules for the SLO:
+
+1. **Base `_unlabeled` recordings** - each metric (`openslo_slo_info`, `openslo_slo_objective`, `openslo_slo_timewindow_days`, `openslo_slo_error_budget`, `openslo_slo_current_burn_rate`, `openslo_slo_period_burn_rate`, `openslo_slo_period_error_budget_remaining`, and every `openslo_sli_error_rate_*`) is emitted with the `_unlabeled` suffix. They carry only `openslo_slo_name` and `openslo_spec_version` labels; the chosen dimension label flows through from the underlying source query's series.
+2. **Post-process `label_join` rules** - sibling rules that join the value of the chosen dimension label into `openslo_slo_name` with `-` as the separator, producing one series per dimension value.
+
+After Prom evaluates the rules:
+
+```
+openslo_slo_current_burn_rate{openslo_slo_name="account-api-latency"}      = 0.2
+openslo_slo_current_burn_rate{openslo_slo_name="checkout-api-latency"}     = 1.4
+openslo_slo_current_burn_rate{openslo_slo_name="recommendation-api-latency"} = 4.7
+```
+
+`openslo_slo_current_burn_rate` here is just an example. All 11 base metrics above get the same fan-out. Same SLO target, same alert policies - but three independently firing series. Page on whichever dimension crosses 14.4x; the spec author writes the SLI once.
+
+Working example at [`examples/multi-dim-slo/`](examples/multi-dim-slo/).
+
+### When to use
+
+- The underlying metric already splits by a label and you want shared target definitions across all series.
+- Alert routing benefits from per-dimension firing rather than aggregate (per-caller-service paging, per-region escalation).
+- You want per-dimension burn dashboards without writing one SLO per dimension.
+
+Skip when:
+
+- The cardinal label is unbounded (`user_id`, raw trace IDs) - recording-rule count grows linearly with cardinality and burns Prom.
+- You only care about the aggregate across all series - a regular single-dim SLO is simpler.
+
+### Trade-offs
+
+- Recording rule count grows linearly with the cardinality of the chosen label. Bounded labels with a known max (caller services, regions, routes) work well.
+- The dimension value is embedded in `openslo_slo_name` rather than as a separate label - dashboard queries must filter by prefix match (`openslo_slo_name=~"account-.*-api-latency$"`) or use the original source label.
+- Alert rule names span all dimension values; severity in the `severity` label differentiates per-dimension alerts.
+
+## 6. Dashboards and integrity rules
+
+Three artefacts ship alongside the rules in `deploy/`.
+
+### 6.1 `deploy/dashboards/`
+
+Two Grafana dashboards that auto-provision via the standard sidecar pattern (`openslo-dashboards` ConfigMap, label `grafana_dashboard=1`):
+
+- `openslo-list.json` (`OpenSLO - Manage SLOs`) - one row per SLO with columns: SLO name, Objective %, Period SLI (30d), Status (0-3 categorical), Budget Left %. Color-coded Status + Budget cells.
+- `openslo-detail.json` (`OpenSLO - SLO detail`) - drilled-in view: header (name/description/target), SLI 28d timeseries + stat, Error Budget Burndown timeseries + 28d Remaining stat (percent), Error Budget Burn Rate timeseries + Current Burn Rate stat (multiplier), SLO target stat.
+
+Both use the `datasource` and `slo` variables. Drill from list by clicking a row. Reading guide tailored for the otel-demo end-to-end flow: [`examples/oteldemo/README.md` section 2](examples/oteldemo/README.md#2-read-the-slos).
+
+### 6.2 `deploy/mixins/`
+
+Grafonnet source. Do not hand-edit `deploy/dashboards/*.json` - the next `make release` will overwrite them. Edit the jsonnet files and `make -C deploy/mixins release` (regenerate + sync-legacy + render integrity rules + lint-rules). Vendor dir is `tmp/grafonnet-vendor/`; populated by Grafana tooling, safe to re-bootstrap.
+
+### 6.3 `deploy/rules/openslo-integrity-rules.yaml`
+
+One recording rule and one alert that catch spec drift - an SLO that the generator knows about but whose `openslo_sli_error_rate_5m` series has no samples for the last 10 minutes:
+
+```
+openslo_slo_metric_missing{openslo_slo_name="..."} == 1   # offending SLOs
+OpenSloSpecDrift { openslo_slo_name="..." } fire           # severity page, after 10m confirm
+```
+
+Shipped via the `deploy/rules/` ConfigMap (`make -C examples/oteldemo sync` mounts both rules + dashboards). The fix path is in the alert's `description` annotation.
+
+## 7. Examples
+
+Six examples ship with the repo. Five are minimal spec bundles; one (`oteldemo/`) is a full kind + Helm deployment of the OpenTelemetry Demo with our rules and dashboards.
+
+| Directory | Strategy | Has Makefile | Has kind harness |
+|---|---|---|---|
+| `examples/api-latency-slo/` | `burn-rate` | no | no |
+| `examples/error-budget-slo/` | `burn-rate` | no | no |
+| `examples/error-rate-slo/` | `error-rate` | no | no |
+| `examples/multi-burn-slo/` | `multi-burn-rate` | no | no |
+| `examples/multi-dim-slo/` | `burn-rate` + multi-dim annotation | no | no |
+| `examples/oteldemo/` | `multi-window-multi-burn-rate` across 11 SLOs | yes | yes |
+
+The five minimal examples call `opensloctl` directly:
+
+```
+# check specs (CI-friendly, no files written)
+opensloctl validate -f examples/api-latency-slo
+opensloctl validate -f examples/error-rate-slo
+opensloctl validate -f examples/multi-burn-slo
+opensloctl validate -f examples/multi-dim-slo
+opensloctl validate -f examples/oteldemo/specs
+
+# generate
+rm -rf output/ && mkdir output/
+opensloctl generate -f examples/api-latency-slo -o output/
+opensloctl generate -f examples/error-rate-slo -o output/
+opensloctl generate -f examples/multi-burn-slo -o output/
+opensloctl generate -f examples/multi-dim-slo -o output/
+opensloctl generate -r -f examples/oteldemo/specs -o output/
 ls output/
-# api-latency-slo-recording-rules.yaml
-# api-latency-slo-alert-rules.yaml
 ```
 
-## Semantic Conventions
+Each example ships a directory-specific README. The oteldemo README covers the deploy + dashboard reading flow; the others restate the strategy and file layout for their bundle.
 
-opensloctl defines a registry of metrics and attributes for SLO telemetry. The registry lives in `semconv/registry/` and is used to generate `pkg/semconv/semconv_gen.go`.
+The `oteldemo/` example is the only one with a real end-to-end harness - kind cluster, Helm chart install, ConfigMap sync, chaos flags, and counting 11 real SLOs. Start there if you want to see every generated artefact in a live cluster.
+
+## 8. Semantic conventions
+
+opensloctl defines a registry of SLO telemetry metrics and attributes. The registry lives in `semconv/registry/` and is used to generate `pkg/semconv/semconv_gen.go` (auto-generated, do not hand-edit).
 
 ### Attributes
 
 | Attribute | Type | Description |
 |---|---|---|
-| `openslo.slo.name` | string | The name of the SLO as defined in the OpenSlo spec. |
-| `openslo.spec.version` | string | The OpenSLO API version of the SLO spec. |
+| `openslo.slo.name` | string | The SLO name |
+| `openslo.spec.version` | string | OpenSLO API version of the spec |
+| `openslo.service.name` | string | Service the SLO belongs to (matches the `Service` spec) |
+| `openslo.alert.severity` | string | Alert severity (`page`, `ticket`, ...) on alert rules |
+| `openslo.notification.target` | string | Notification target carried on alert rules (e.g. `pagerduty`, `eng-team`) |
+
+Pass-through labels not in the registry: `openslo_slo_description` (one-line spec description folded across lines), `chaos_flag` (demo only). Both are emitted by the generator as labels on `openslo_slo_info` but defined per spec.
+
+Deprecated attributes (still emitted as Go constants for back-compat, marked `deprecated.reason: obsoleted` in the registry):
+
+| Attribute | Type | Reason |
+|---|---|---|
+| `openslo.objective.decimal` | double | Replaced by the `openslo_slo_objective` recording rule. |
+| `openslo.objective.percent` | double | Replaced by the `openslo_slo_objective` recording rule. |
+| `openslo.timewindow.duration` | string | Encoded in the SLI error-rate windowed recording rules. |
 
 ### Metrics
 
+All metrics below carry `openslo.slo.name` and `openslo.spec.version` unless noted. Units are dimensionless (`1`) - alert thresholds carry the units, not the metric.
+
 #### SLO Info
 
-| Metric | Type | Unit | Description |
-|---|---|---|---|
-| `openslo.slo.info` | gauge | 1 | Identifies the existence of an SLO. Always has value 1. |
-| `openslo.slo.objective` | gauge | 1 | The target SLI objective (e.g., 0.999 for 99.9% availability). |
-| `openslo.slo.timewindow_days` | gauge | 1 | The SLO time window duration expressed as a number of days. |
-| `openslo.slo.error_budget` | gauge | 1 | The error budget calculated as 1 minus the objective. |
-
-All SLO info metrics carry `openslo.slo.name` and `openslo.spec.version` labels.
+| Metric | Description |
+|---|---|
+| `openslo.slo.info` | Identifies the existence of an SLO. Always value 1. |
+| `openslo.slo.objective` | Target SLI objective (e.g. 0.999 for 99.9%). |
+| `openslo.slo.timewindow_days` | Spec `timeWindow` expressed in days. |
+| `openslo.slo.error_budget` | `1 - objective`. |
+| `openslo.slo.current_burn_rate` | `openslo_sli_error_rate_5m / error_budget`. |
+| `openslo.slo.period_burn_rate` | `openslo_sli_error_rate_<longest> / error_budget`. Emitted when an SLO time window matches the multi-window set. |
+| `openslo.slo.period_error_budget_remaining` | `clamp_min(1 - period_burn_rate, 0)`. |
+| `openslo.slo.status` | Categorical health state. 0=Healthy, 1=Burning, 2=Critical, 3=Breached. See [§2.2](#22-recording-rules). |
 
 #### SLI Error Rate
 
 | Metric | Description |
 |---|---|
-| `openslo.sli.error_rate_5m` | SLI error rate over a 5-minute window. |
-| `openslo.sli.error_rate_30m` | SLI error rate over a 30-minute window. |
-| `openslo.sli.error_rate_1h` | SLI error rate over a 1-hour window. |
-| `openslo.sli.error_rate_2h` | SLI error rate over a 2-hour window. |
-| `openslo.sli.error_rate_6h` | SLI error rate over a 6-hour window. |
-| `openslo.sli.error_rate_1d` | SLI error rate over a 1-day window. |
-| `openslo.sli.error_rate_3d` | SLI error rate over a 3-day window. |
-| `openslo.sli.error_rate_7d` | SLI error rate over a 7-day window. |
-| `openslo.sli.error_rate_28d` | SLI error rate over a 28-day window. |
-| `openslo.sli.error_rate_30d` | SLI error rate over a 30-day window. |
+| `openslo.sli.error_rate_5m` ... `_30d` | SLI error rate over each multi-window. Windows: `5m, 30m, 1h, 2h, 6h, 1d, 3d, 7d, 28d, 30d`. |
 
-All error rate metrics carry `openslo.slo.name` and `openslo.spec.version` labels.
+#### SLI Event Rate (RatioMetric SLIs only)
 
-### Registry Management
+| Metric | Description |
+|---|---|
+| `openslo.sli.event_rate_5m` ... `_30d` | Events per second over each multi-window. Emitted only for `RatioMetric` SLIs since the spec exposes a `total` count query. Use it in dashboards to interpret error-budget burn in absolute event-volume terms. `thresholdMetric` (histogram-style) SLIs do not emit this metric. |
+
+### Registry management
 
 The semantic convention registry is managed with [OpenTelemetry Weaver](https://github.com/open-telemetry/weaver).
 
-- **Registry source**: `semconv/registry/` — YAML definitions for attributes and metrics
-- **Generated code**: `pkg/semconv/semconv_gen.go` — auto-generated Go constants from the registry
-- **Templates**: `semconv/templates/go/` — MiniJinja templates that produce the Go file
+- **Registry source**: `semconv/registry/` - YAML definitions for attributes and metrics
+- **Generated code**: `pkg/semconv/semconv_gen.go` - auto-generated Go constants
+- **Templates**: `semconv/templates/go/` - MiniJinja templates
 
 ```
-make semconv-generate   # regenerate semconv_gen.go from registry
-make semconv-check      # validate registry schema
-make semconv-stats      # show registry statistics
-make semconv-diff BASE=<ref>  # detect breaking changes vs a base ref
+make semconv-generate             # registry YAML -> pkg/semconv/semconv_gen.go
+make semconv-check                # validate registry schema
+make semconv-stats                # show registry statistics
+make semconv-diff BASE=<ref>      # detect breaking changes vs base ref
 ```
 
-### Consuming the Registry
+### Consuming the registry
 
-If your project also uses OpenTelemetry Weaver, you can depend on this registry directly. Add it as a dependency in your `manifest.yaml`:
+If your project also uses OpenTelemetry Weaver, depend on this registry directly. Add it in your `manifest.yaml`:
 
 ```yaml
 schema_url: https://your-org.com/schemas/your-app/v1.0.0
@@ -509,7 +645,7 @@ dependencies:
     registry_path: https://github.com/thisisibrahimd/opensloctl.git[semconv/registry]
 ```
 
-Then reference the attributes in your own metrics and spans:
+Then reference the attributes in your own metrics:
 
 ```yaml
 metrics:
@@ -525,11 +661,62 @@ metrics:
         requirement_level: required
 ```
 
-Alternatively, if you don't use Weaver, the Go constants are available at `github.com/thisisibrahimd/opensloctl/pkg/semconv`:
+If you do not use Weaver, the Go constants are available at `github.com/thisisibrahimd/opensloctl/pkg/semconv`:
 
 ```go
 import "github.com/thisisibrahimd/opensloctl/pkg/semconv"
 
-// Use generated constants
 meter.Float64ObservableGauge(semconv.METRIC_OPENSLO_SLO_INFO)
+gauge := meter.Float64ObservableGauge(semconv.METRIC_OPENSLO_SLO_STATUS,
+    api.WithDescription("SLO categorical health state"))
 ```
+
+## 9. Development
+
+### Toolchain
+
+This project uses [mise](https://mise.jdx.dev/) to manage tool versions. `mise.toml` declares `go = "1.26"` (the version releases are built and tested against); `go.mod` declares `go 1.25.5` as the minimum supported version.
+
+```
+# one-time
+mise install
+
+# developer commands
+make build         # go build -o opensloctl .
+make test          # go test ./...
+make lint          # golangci-lint run
+make tidy          # go mod tidy
+
+# generators
+make generate FILE=examples/oteldemo/specs OUTPUT=examples/oteldemo/rules
+make validate FILE=examples/oteldemo/specs
+
+# semconv management
+make semconv-generate
+make semconv-check
+
+# dashboards / integrity rules
+make -C deploy/mixins release          # also pushes JSON to deploy/dashboards; render integrity rules
+
+# snapshot test upkeep
+go test ./internal/generator/prometheusgenerator/... -update
+```
+
+### Repository layout
+
+| Path | Purpose |
+|---|---|
+| `main.go` -> `cmd.Execute()` | single CLI entrypoint |
+| `pkg/specstore/loader.go` | load YAML via `openslosdk.Decode`, sort into typed structs |
+| `internal/generator/generator.go` | `Generator` interface |
+| `internal/generator/prometheusgenerator/` | template + sprig rendering; emits the unified `<slo>-rules.yaml` |
+| `internal/feature/feature.go` | feature flag handling |
+| `pkg/semconv/semconv_gen.go` | auto-generated, do not edit |
+| `pkg/util/file.go` | recursive YAML/YML file discovery |
+| `semconv/registry/` | OTel Weaver YAML for metrics + attributes |
+| `semconv/templates/go/` | MiniJinja templates for codegen |
+| `examples/<kind>-slo/` | the six spec bundles |
+| `deploy/dashboards/` | repo-root Grafana dashboards (regenerated from `deploy/mixins/`) |
+| `deploy/mixins/` | grafonnet source for the dashboards + integrity rules |
+| `deploy/rules/` | rendered integrity rules (subset of rules CM payload) |
+| `CHANGELOG.md` | per-release change log |

@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: api-latency-ticket-multi-dim
+spec:
+  severity: ticket
+  description: Per-service latency budget exceeded at a slow burn rate
+  condition:
+    kind: burn-rate
+    op: gte
+    threshold: 3
+    lookbackWindow: 2h
+    alertAfter: 15m

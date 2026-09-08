@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: payment-ticket-3x
+spec:
+  severity: ticket
+  description: Ticket on sustained payment burn rate (3x over 2h)
+  condition:
+    kind: multi-burn-rate
+    op: gte
+    threshold: 3
+    lookbackWindow: 2h
+    alertAfter: 15m

@@ -1,14 +1,16 @@
+// Package feature holds cross-cutting flags and small inputs that shape
+// opensloctl generator behavior.
 package feature
 
-// this package holds informations about features
-
-// Multi Dimensional SLIs
-// This allows multiple slis to spawn out of a single sli definition
-// There are two annotaitons needed to support this feature.
-
 const (
-	MULTI_DIMENSIONAL_SLI_DIMENSIONS = "multi-dimensional-sli.openslo.com/dimensions" // This tells us the dimensions we want to look into
-	MULTI_DIMENSIONAL_SLI_LABEL      = "multi-dimensional-sli.openslo.com/label"      // label annotation tells which prom label has the dimension values
+	// MULTI_DIMENSIONAL_SLI_DIMENSIONS - annotation listing the OpenSlo
+	// SLO dimension values to expand into separate Prometheus recording
+	// series.
+	MULTI_DIMENSIONAL_SLI_DIMENSIONS = "multi-dimensional-sli.openslo.com/dimensions"
+
+	// MULTI_DIMENSIONAL_SLI_LABEL - annotation naming the Prometheus label
+	// that carries each dimension value (joined into openslo_slo_id later).
+	MULTI_DIMENSIONAL_SLI_LABEL = "multi-dimensional-sli.openslo.com/label"
 )
 
 var (

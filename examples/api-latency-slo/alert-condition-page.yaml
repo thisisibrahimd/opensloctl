@@ -6,7 +6,7 @@ spec:
   severity: page
   description: Page on-call when API latency burn rate is too fast
   condition:
-    kind: burnrate
+    kind: burn-rate
     op: gte
     threshold: 14.4
     lookbackWindow: 5m

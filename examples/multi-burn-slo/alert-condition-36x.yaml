@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: payment-page-36x
+spec:
+  severity: page
+  description: Page on-call when payment burn rate spikes hard (36x over 5m)
+  condition:
+    kind: multi-burn-rate
+    op: gte
+    threshold: 36
+    lookbackWindow: 5m
+    alertAfter: 2m

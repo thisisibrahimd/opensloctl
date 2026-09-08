@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: payment-ticket-1x-policy
+spec:
+  description: Ticket tier, slow (1x@6h) alert
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: payment-ticket-1x
+  notificationTargets:
+    - targetRef: oncall-slack

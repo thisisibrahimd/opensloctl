@@ -10,6 +10,8 @@ metrics:
     attributes:
       - ref: openslo.slo.name
         requirement_level: required
+      - ref: openslo.slo.description
+        requirement_level: recommended
       - ref: openslo.spec.version
         requirement_level: required
 
@@ -48,6 +50,48 @@ metrics:
         requirement_level: required
       - ref: openslo.spec.version
         requirement_level: required
+
+  - name: openslo.slo.current_burn_rate
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: Instantaneous error-budget burn rate = 5-minute SLI error rate divided by the error budget.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+      - ref: openslo.service.name
+        requirement_level: recommended
+
+  - name: openslo.slo.period_burn_rate
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: Period error-budget burn rate = full-window SLI error rate (typically 30d) divided by the error budget.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+      - ref: openslo.service.name
+        requirement_level: recommended
+
+  - name: openslo.slo.period_error_budget_remaining
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: Remaining error budget ratio over the full period = 1 minus period_burn_rate (1 = full budget remaining).
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+      - ref: openslo.service.name
+        requirement_level: recommended
 
   - name: openslo.sli.error_rate_5m
     instrument: gauge
@@ -163,6 +207,146 @@ metrics:
     stability: development
     requirement_level: recommended
     brief: SLI error rate over a 30-day window.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_5m
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate (events per second) over a 5-minute window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_30m
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 30-minute window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_1h
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 1-hour window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_2h
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 2-hour window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_6h
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 6-hour window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_1d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 1-day window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_3d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 3-day window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_7d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 7-day window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_28d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 28-day window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.sli.event_rate_30d
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: SLI event rate over a 30-day window. Emitted only for RatioMetric SLIs.
+    attributes:
+      - ref: openslo.slo.name
+        requirement_level: required
+      - ref: openslo.spec.version
+        requirement_level: required
+
+  - name: openslo.slo.status
+    instrument: gauge
+    unit: "1"
+    stability: development
+    requirement_level: recommended
+    brief: >
+      Categorical SLO health state derived from the current burn rate
+      against overridable thresholds. Values: 0=Healthy
+      (burn<warning), 1=Burning (warning<=burn<critical), 2=Critical
+      (critical<=burn<breached), 3=Breached (burn>=breached). Defaults
+      follow Google SRE workbook reference points (1/6/14.4x) and can
+      be overridden per SLO via threshold.status.openslo.com/{warning,
+      critical,breached} annotations. Emitted only for SLOs that
+      reference one or more AlertPolicies.
     attributes:
       - ref: openslo.slo.name
         requirement_level: required

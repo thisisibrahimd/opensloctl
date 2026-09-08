@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: payment-page-36x-policy
+spec:
+  description: Page tier, fast (36x@5m) alert
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: payment-page-36x
+  notificationTargets:
+    - targetRef: oncall-pagerduty

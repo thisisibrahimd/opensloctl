@@ -1,0 +1,218 @@
+groups:
+  - name: openslo-info-recordings-test-multi-dim-slo
+    rules:
+    - record: openslo_slo_info_unlabeled
+      expr: vector(1)
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_slo_description: "SLO expanded per service_name dimension via label_join"
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_slo_objective_unlabeled
+      expr: vector(0.999)
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_slo_timewindow_days_unlabeled
+      expr: vector(30)
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_slo_error_budget_unlabeled
+      expr: vector(1- 0.999)
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_slo_current_burn_rate_unlabeled
+      expr: |
+        openslo_sli_error_rate_5m{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_slo_period_burn_rate_unlabeled
+      expr: |
+        openslo_sli_error_rate_30d{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_slo_period_error_budget_remaining_unlabeled
+      expr: clamp_min(1 - openslo_slo_period_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 0)
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_slo_info
+      expr: label_join(openslo_slo_info_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_slo_objective
+      expr: label_join(openslo_slo_objective_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_slo_timewindow_days
+      expr: label_join(openslo_slo_timewindow_days_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_slo_error_budget
+      expr: label_join(openslo_slo_error_budget_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_slo_current_burn_rate
+      expr: |
+        label_join(openslo_sli_error_rate_5m_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_slo_period_burn_rate
+      expr: |
+        label_join(openslo_sli_error_rate_30d_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_slo_period_error_budget_remaining
+      expr: clamp_min(1 - openslo_slo_period_burn_rate{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 0)
+      labels:
+        openslo_spec_version: openslo/v1
+  - name: openslo-sli-recordings-test-multi-dim-slo
+    rules:
+    - record: openslo_sli_error_rate_5m_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[5m])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_30m_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[30m])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_1h_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[1h])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_3h_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[3h])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_6h_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[6h])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_1d_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[1d])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_3d_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[3d])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_7d_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[7d])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_28d_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[28d])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_30d_unlabeled
+      expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[30d])) by (le))
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_sli_error_rate_5m
+      expr: label_join(openslo_sli_error_rate_5m_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_30m
+      expr: label_join(openslo_sli_error_rate_30m_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_1h
+      expr: label_join(openslo_sli_error_rate_1h_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_3h
+      expr: label_join(openslo_sli_error_rate_3h_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_6h
+      expr: label_join(openslo_sli_error_rate_6h_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_1d
+      expr: label_join(openslo_sli_error_rate_1d_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_3d
+      expr: label_join(openslo_sli_error_rate_3d_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_7d
+      expr: label_join(openslo_sli_error_rate_7d_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_28d
+      expr: label_join(openslo_sli_error_rate_28d_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+    - record: openslo_sli_error_rate_30d
+      expr: label_join(openslo_sli_error_rate_30d_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1
+  - name: openslo-status-recordings-test-multi-dim-slo
+    rules:
+    - record: openslo_slo_status_unlabeled
+      expr: |
+        (
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= bool 14.4)
+          * 3
+        )
+        or
+        (
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= bool 6)
+          and
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} <  bool 14.4)
+          * 2
+        )
+        or
+        (
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= bool 1)
+          and
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} <  bool 6)
+          * 1
+        )
+      labels:
+        openslo_slo_name: test-multi-dim-slo
+        openslo_spec_version: openslo/v1
+        openslo_service_name: test-multi-dim-svc
+    - record: openslo_slo_status
+      expr: label_join(openslo_slo_status_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"}, 'openslo_slo_name', '-', 'openslo_slo_name', 'service_name')
+      labels:
+        openslo_spec_version: openslo/v1

@@ -1,0 +1,537 @@
+{
+   "description": "Per-SLO drilldown. Open from OpenSLO - Manage SLOs.",
+   "panels": [
+      {
+         "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 18,
+            "x": 0,
+            "y": 0
+         },
+         "id": 1,
+         "options": {
+            "code": {
+               "language": "plaintext",
+               "showLineNumbers": false
+            },
+            "content": "## $slo\n\n$description\n\n**Target:** $target",
+            "mode": "markdown"
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_info{openslo_slo_name=\"$slo\"}",
+               "legendFormat": "{{openslo_slo_name}}",
+               "refId": "A"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_objective{openslo_slo_name=\"$slo\"}",
+               "legendFormat": "{{openslo_slo_name}}",
+               "refId": "B"
+            }
+         ],
+         "title": "",
+         "type": "text"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "decimals": 2,
+               "thresholds": {
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     }
+                  ]
+               },
+               "unit": "percent"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 0
+         },
+         "id": 2,
+         "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ],
+               "fields": "",
+               "values": false
+            },
+            "textMode": "auto"
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_objective{openslo_slo_name=\"$slo\"} * 100",
+               "legendFormat": "{{openslo_slo_name}}",
+               "refId": "A"
+            }
+         ],
+         "title": "SLO",
+         "type": "stat"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "custom": {
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "lineWidth": 1,
+                  "showPoints": "never"
+               },
+               "decimals": 2,
+               "thresholds": {
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     }
+                  ]
+               },
+               "unit": "percent"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 18,
+            "x": 0,
+            "y": 8
+         },
+         "id": 3,
+         "options": {
+            "legend": {
+               "calcs": [ ],
+               "displayMode": "list",
+               "placement": "bottom",
+               "showLegend": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "(1 - openslo_sli_error_rate_30d{openslo_slo_name=\"$slo\"}) * 100",
+               "legendFormat": "28d",
+               "refId": "A"
+            }
+         ],
+         "title": "SLI",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "decimals": 2,
+               "thresholds": {
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     }
+                  ]
+               },
+               "unit": "percent"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 16
+         },
+         "id": 4,
+         "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ],
+               "fields": "",
+               "values": false
+            },
+            "textMode": "auto"
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "(1 - openslo_sli_error_rate_30d{openslo_slo_name=\"$slo\"}) * 100",
+               "legendFormat": "{{openslo_slo_name}}",
+               "refId": "A"
+            }
+         ],
+         "title": "28d SLI",
+         "type": "stat"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "custom": {
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "lineWidth": 1,
+                  "showPoints": "never"
+               },
+               "decimals": 2,
+               "max": 100,
+               "min": 0,
+               "thresholds": {
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     }
+                  ]
+               },
+               "unit": "percent"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 18,
+            "x": 0,
+            "y": 16
+         },
+         "id": 5,
+         "options": {
+            "legend": {
+               "calcs": [ ],
+               "displayMode": "list",
+               "placement": "bottom",
+               "showLegend": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_period_error_budget_remaining{openslo_slo_name=\"$slo\"} * 100",
+               "legendFormat": "Period remaining",
+               "refId": "A"
+            }
+         ],
+         "title": "Error Budget Burndown",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "decimals": 2,
+               "thresholds": {
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     }
+                  ]
+               },
+               "unit": "percent"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 24
+         },
+         "id": 6,
+         "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ],
+               "fields": "",
+               "values": false
+            },
+            "textMode": "auto"
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_period_error_budget_remaining{openslo_slo_name=\"$slo\"} * 100",
+               "legendFormat": "{{openslo_slo_name}}",
+               "refId": "A"
+            }
+         ],
+         "title": "28d Remaining Error Budget",
+         "type": "stat"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "custom": {
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "lineWidth": 1,
+                  "showPoints": "never"
+               },
+               "decimals": 2,
+               "thresholds": {
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     }
+                  ]
+               }
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 18,
+            "x": 0,
+            "y": 24
+         },
+         "id": 7,
+         "options": {
+            "legend": {
+               "calcs": [ ],
+               "displayMode": "list",
+               "placement": "bottom",
+               "showLegend": true
+            },
+            "tooltip": {
+               "mode": "multi",
+               "sort": "desc"
+            }
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_current_burn_rate{openslo_slo_name=\"$slo\"}",
+               "legendFormat": "Current burn rate",
+               "refId": "A"
+            }
+         ],
+         "title": "Error Budget Burn Rate",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "color": {
+                  "mode": "thresholds"
+               },
+               "decimals": 2,
+               "thresholds": {
+                  "steps": [
+                     {
+                        "color": "green",
+                        "value": null
+                     }
+                  ]
+               }
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 32
+         },
+         "id": 8,
+         "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+               "calcs": [
+                  "lastNotNull"
+               ],
+               "fields": "",
+               "values": false
+            },
+            "textMode": "auto"
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_current_burn_rate{openslo_slo_name=\"$slo\"}",
+               "legendFormat": "{{openslo_slo_name}}",
+               "refId": "A"
+            }
+         ],
+         "title": "Current Burn Rate",
+         "type": "stat"
+      }
+   ],
+   "refresh": "30s",
+   "schemaVersion": 39,
+   "tags": [
+      "openslo"
+   ],
+   "templating": {
+      "list": [
+         {
+            "allowCustomValue": false,
+            "includeAll": false,
+            "label": "datasource",
+            "multi": false,
+            "name": "datasource",
+            "pluginId": "prometheus",
+            "query": "prometheus",
+            "refresh": 1,
+            "type": "datasource"
+         },
+         {
+            "allowCustomValue": false,
+            "datasource": {
+               "type": "prometheus",
+               "uid": "${datasource}"
+            },
+            "includeAll": false,
+            "multi": false,
+            "name": "slo",
+            "query": "label_values(openslo_slo_info, openslo_slo_name)",
+            "refresh": 2,
+            "type": "query"
+         },
+         {
+            "allowCustomValue": false,
+            "datasource": {
+               "type": "prometheus",
+               "uid": "${datasource}"
+            },
+            "hide": 2,
+            "includeAll": false,
+            "multi": false,
+            "name": "description",
+            "query": "openslo_slo_info{openslo_slo_name=~\"$slo\"}",
+            "refresh": 2,
+            "regex": "/.*openslo_slo_description=\"(.*)\"/",
+            "type": "query"
+         },
+         {
+            "allowCustomValue": false,
+            "datasource": {
+               "type": "prometheus",
+               "uid": "${datasource}"
+            },
+            "hide": 2,
+            "includeAll": false,
+            "multi": false,
+            "name": "target",
+            "query": "openslo_slo_objective{openslo_slo_name=~\"$slo\"}",
+            "refresh": 2,
+            "regex": "/.* (\\d+\\.?\\d*) .*/",
+            "type": "query"
+         }
+      ]
+   },
+   "time": {
+      "from": "now-30d",
+      "to": "now"
+   },
+   "timezone": "utc",
+   "title": "OpenSLO - SLO detail",
+   "uid": "openslo-detail"
+}

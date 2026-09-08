@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: payment-ticket-3x-policy
+spec:
+  description: Ticket tier, fast (3x@2h) alert
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: payment-ticket-3x
+  notificationTargets:
+    - targetRef: oncall-slack

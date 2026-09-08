@@ -1,0 +1,28 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: api-latency
+  annotations:
+    multi-dimensional-sli.openslo.com/label: service_name
+    multi-dimensional-sli.openslo.com/dimensions: "account,checkout,recommendation"
+  labels:
+    service: api-gateway
+spec:
+  service: api-gateway
+  description: >
+    P99 API latency budget tracked per downstream caller service. One
+    SLO is expanded into a series per service_name dimension value via
+    the multi-dim annotations on metadata. Each downstream gets its own
+    openslo_slo_name like "account-api-latency" and its own burn rate
+    recording.
+  indicatorRef: api-gateway-latency-sli
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "P99 latency under 500ms"
+      target: 0.999
+  alertPolicies:
+    - alertPolicyRef: api-latency-page-policy
+    - alertPolicyRef: api-latency-ticket-policy

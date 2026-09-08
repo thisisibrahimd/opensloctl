@@ -1,0 +1,42 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: recommendation-availability
+  displayName: Recommendation Service Availability
+  labels:
+    chaos_flag: recommendationCacheFailure
+spec:
+  service: recommendationservice
+  description: "95% of recommendation fetches should succeed, measured via frontend HTTP SERVER `GET /api/recommendations` (target 0.95; trips on `recommendationCacheFailure` and `productCatalogFailure` cascade)."
+  indicator:
+    metadata:
+      name: recommendation-availability-sli
+    spec:
+      ratioMetric:
+        counter: true
+        good:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/recommendations", status_code!="STATUS_CODE_ERROR"}[{{.Window}}]))
+        total:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/recommendations"}[{{.Window}}]))
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  budgetingMethod: Occurrences
+  objectives:
+    - displayName: 95% of recommendation requests succeed (baseline-adjusted)
+      target: 0.95
+  alertPolicies:
+    - alertPolicyRef: burnrate-page-fast-5m-policy
+    - alertPolicyRef: burnrate-page-fast-1h-policy
+    - alertPolicyRef: burnrate-page-slow-30m-policy
+    - alertPolicyRef: burnrate-page-slow-6h-policy
+    - alertPolicyRef: burnrate-ticket-fast-2h-policy
+    - alertPolicyRef: burnrate-ticket-fast-1d-policy
+    - alertPolicyRef: burnrate-ticket-slow-6h-policy
+    - alertPolicyRef: burnrate-ticket-slow-3d-policy

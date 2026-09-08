@@ -6,6 +6,12 @@ package semconv
 // Metric names from the openslo semantic convention registry.
 const (
 
+	// The alert severity (e.g., page, ticket) attached to SLO alert rules.
+	ATTRIBUTE_OPENSLO_ALERT_SEVERITY = "openslo.alert.severity"
+
+	// The notification target for an alert (e.g., pagerduty, slack, engineers).
+	ATTRIBUTE_OPENSLO_NOTIFICATION_TARGET = "openslo.notification.target"
+
 	// The SLO objective expressed as a decimal value (e.g., 0.999).
 	ATTRIBUTE_OPENSLO_OBJECTIVE_DECIMAL = "openslo.objective.decimal"
 
@@ -14,6 +20,9 @@ const (
 
 	// The name of the service the SLO belongs to.
 	ATTRIBUTE_OPENSLO_SERVICE_NAME = "openslo.service.name"
+
+	// The free-form description of the SLO as defined in the OpenSlo spec's `spec.description` field, folded to a single line.
+	ATTRIBUTE_OPENSLO_SLO_DESCRIPTION = "openslo.slo.description"
 
 	// The name of the SLO as defined in the OpenSlo spec.
 	ATTRIBUTE_OPENSLO_SLO_NAME = "openslo.slo.name"
@@ -54,6 +63,39 @@ const (
 	// SLI error rate over a 7-day window.
 	METRIC_OPENSLO_SLI_ERROR_RATE_7D = "openslo.sli.error_rate_7d"
 
+	// SLI event rate over a 1-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_1D = "openslo.sli.event_rate_1d"
+
+	// SLI event rate over a 1-hour window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_1H = "openslo.sli.event_rate_1h"
+
+	// SLI event rate over a 28-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_28D = "openslo.sli.event_rate_28d"
+
+	// SLI event rate over a 2-hour window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_2H = "openslo.sli.event_rate_2h"
+
+	// SLI event rate over a 30-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_30D = "openslo.sli.event_rate_30d"
+
+	// SLI event rate over a 30-minute window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_30M = "openslo.sli.event_rate_30m"
+
+	// SLI event rate over a 3-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_3D = "openslo.sli.event_rate_3d"
+
+	// SLI event rate (events per second) over a 5-minute window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_5M = "openslo.sli.event_rate_5m"
+
+	// SLI event rate over a 6-hour window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_6H = "openslo.sli.event_rate_6h"
+
+	// SLI event rate over a 7-day window. Emitted only for RatioMetric SLIs.
+	METRIC_OPENSLO_SLI_EVENT_RATE_7D = "openslo.sli.event_rate_7d"
+
+	// Instantaneous error-budget burn rate = 5-minute SLI error rate divided by the error budget.
+	METRIC_OPENSLO_SLO_CURRENT_BURN_RATE = "openslo.slo.current_burn_rate"
+
 	// The error budget calculated as 1 minus the objective.
 	METRIC_OPENSLO_SLO_ERROR_BUDGET = "openslo.slo.error_budget"
 
@@ -62,6 +104,16 @@ const (
 
 	// The target SLI objective (e.g., 0.999 for 99.9% availability).
 	METRIC_OPENSLO_SLO_OBJECTIVE = "openslo.slo.objective"
+
+	// Period error-budget burn rate = full-window SLI error rate (typically 30d) divided by the error budget.
+	METRIC_OPENSLO_SLO_PERIOD_BURN_RATE = "openslo.slo.period_burn_rate"
+
+	// Remaining error budget ratio over the full period = 1 minus period_burn_rate (1 = full budget remaining).
+	METRIC_OPENSLO_SLO_PERIOD_ERROR_BUDGET_REMAINING = "openslo.slo.period_error_budget_remaining"
+
+	// Categorical SLO health state derived from the current burn rate against overridable thresholds. Values: 0=Healthy (burn<warning), 1=Burning (warning<=burn<critical), 2=Critical (critical<=burn<breached), 3=Breached (burn>=breached). Defaults follow Google SRE workbook reference points (1/6/14.4x) and can be overridden per SLO via threshold.status.openslo.com/{warning, critical,breached} annotations. Emitted only for SLOs that reference one or more AlertPolicies.
+
+	METRIC_OPENSLO_SLO_STATUS = "openslo.slo.status"
 
 	// The SLO time window duration expressed as a number of days.
 	METRIC_OPENSLO_SLO_TIMEWINDOW_DAYS = "openslo.slo.timewindow_days"

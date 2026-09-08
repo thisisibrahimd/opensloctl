@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: checkout-page
+spec:
+  severity: page
+  description: Page on-call when checkout error rate exceeds the SLO threshold quickly
+  condition:
+    kind: error-rate
+    op: gte
+    threshold: 0.001
+    lookbackWindow: 5m
+    alertAfter: 2m

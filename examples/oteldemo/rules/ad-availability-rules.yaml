@@ -1,0 +1,354 @@
+groups:
+  - name: openslo-info-recordings-ad-availability
+    rules:
+    - record: openslo_slo_info
+      expr: vector(1)
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_slo_description: "99% of users successfully fetching an ad via frontend HTTP SERVER `GET /api/data` (target 0.95; trips on `adServiceFailure`)."
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_slo_objective
+      expr: vector(0.99)
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_slo_timewindow_days
+      expr: vector(30)
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_slo_error_budget
+      expr: vector(1- 0.99)
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_slo_current_burn_rate
+      expr: |
+        openslo_sli_error_rate_5m{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_slo_period_burn_rate
+      expr: |
+        openslo_sli_error_rate_30d{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"}
+        / on(openslo_slo_name, openslo_spec_version) group_left
+        openslo_slo_error_budget{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"}
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_slo_period_error_budget_remaining
+      expr: clamp_min(1 - openslo_slo_period_burn_rate{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"}, 0)
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+  - name: openslo-sli-recordings-ad-availability
+    rules:
+    - record: openslo_sli_error_rate_5m
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[5m]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[5m]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_30m
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[30m]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[30m]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_1h
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[1h]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[1h]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_3h
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[3h]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[3h]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_6h
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[6h]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[6h]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_1d
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[1d]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[1d]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_3d
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[3d]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[3d]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_7d
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[7d]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[7d]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_28d
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[28d]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[28d]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_error_rate_30d
+      expr: |
+        1 - (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data", status_code!="STATUS_CODE_ERROR"}[30d]))
+        ) / (
+        sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[30d]))
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_5m
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[5m]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_30m
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[30m]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_1h
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[1h]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_3h
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[3h]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_6h
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[6h]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_1d
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[1d]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_3d
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[3d]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_7d
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[7d]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_28d
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[28d]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+    - record: openslo_sli_event_rate_30d
+      expr: sum(rate(traces_span_metrics_calls_total{service_name="frontend", span_kind="SPAN_KIND_SERVER", span_name="GET /api/data"}[30d]))
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+  - name: openslo-status-recordings-ad-availability
+    rules:
+    - record: openslo_slo_status
+      expr: |
+        (
+          (openslo_slo_current_burn_rate{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"} >= bool 14.4)
+          * 3
+        )
+        or
+        (
+          (openslo_slo_current_burn_rate{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"} >= bool 6)
+          and
+          (openslo_slo_current_burn_rate{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"} <  bool 14.4)
+          * 2
+        )
+        or
+        (
+          (openslo_slo_current_burn_rate{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"} >= bool 1)
+          and
+          (openslo_slo_current_burn_rate{openslo_slo_name="ad-availability", openslo_spec_version="openslo/v1"} <  bool 6)
+          * 1
+        )
+      labels:
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+  - name: openslo-alerts-ad-availability
+    rules:
+    - alert: AdAvailabilityMultiWindowMultiBurnRatePage
+      expr: |-
+        (
+        openslo_sli_error_rate_5m{openslo_slo_name="ad-availability"} / (1 - openslo_slo_objective{openslo_slo_name="ad-availability"}) >= 14.400000
+        and
+        openslo_sli_error_rate_1h{openslo_slo_name="ad-availability"} / (1 - openslo_slo_objective{openslo_slo_name="ad-availability"}) >= 14.400000)
+        or
+        (
+        openslo_sli_error_rate_30m{openslo_slo_name="ad-availability"} / (1 - openslo_slo_objective{openslo_slo_name="ad-availability"}) >= 6.000000
+        and
+        openslo_sli_error_rate_6h{openslo_slo_name="ad-availability"} / (1 - openslo_slo_objective{openslo_slo_name="ad-availability"}) >= 6.000000)
+      for: 2m
+      labels:
+        openslo_alert_severity: page
+        openslo_notification_target: engineers
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+      annotations:
+        summary: "Page multi-window multi-burn rate alert for SLO ad-availability"
+        description: "Threshold 14.4x and 6.0x over 5m and 1h and 30m and 6h"
+    - alert: AdAvailabilityMultiWindowMultiBurnRateTicket
+      expr: |-
+        (
+        openslo_sli_error_rate_2h{openslo_slo_name="ad-availability"} / (1 - openslo_slo_objective{openslo_slo_name="ad-availability"}) >= 3.000000
+        and
+        openslo_sli_error_rate_1d{openslo_slo_name="ad-availability"} / (1 - openslo_slo_objective{openslo_slo_name="ad-availability"}) >= 3.000000)
+        or
+        (
+        openslo_sli_error_rate_6h{openslo_slo_name="ad-availability"} / (1 - openslo_slo_objective{openslo_slo_name="ad-availability"}) >= 1.000000
+        and
+        openslo_sli_error_rate_3d{openslo_slo_name="ad-availability"} / (1 - openslo_slo_objective{openslo_slo_name="ad-availability"}) >= 1.000000)
+      for: 15m
+      labels:
+        openslo_alert_severity: ticket
+        openslo_notification_target: engineers
+        openslo_slo_name: ad-availability
+        openslo_spec_version: openslo/v1
+        chaos_flag: adServiceFailure
+        openslo_service_name: ad
+        service: ad
+      annotations:
+        summary: "Ticket multi-window multi-burn rate alert for SLO ad-availability"
+        description: "Threshold 3.0x and 1.0x over 2h and 1d and 6h and 3d"

@@ -1,0 +1,28 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: test-multi-dim-slo
+  annotations:
+    multi-dimensional-sli.openslo.com/label: service_name
+    multi-dimensional-sli.openslo.com/dimensions: "accounting,checkout,recommendation"
+spec:
+  description: SLO expanded per service_name dimension via label_join
+  service: test-multi-dim-svc
+  indicator:
+    metadata:
+      name: test-multi-dim-sli
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: Prometheus
+          spec:
+            query: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api"}[{{.Window}}])) by (le))
+  budgetingMethod: Occurrences
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  objectives:
+    - displayName: "99.9%"
+      op: lte
+      value: 0.5
+      target: 0.999

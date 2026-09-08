@@ -1,0 +1,36 @@
+groups:
+- interval: "1m"
+  name: "openslo-integrity-recordings"
+  rules:
+  - expr: |
+      (
+        count by (openslo_slo_name) (openslo_slo_info)
+        unless on (openslo_slo_name)
+        count by (openslo_slo_name) (openslo_sli_error_rate_5m)
+      ) == 1
+    labels:
+      openslo_alert_severity: "page"
+    record: "openslo_slo_metric_missing"
+- name: "openslo-integrity-alerts"
+  rules:
+  - alert: "OpenSloSpecDrift"
+    annotations:
+      description: |
+        openslo_slo_info is registered for {{ $labels.openslo_slo_name }} but
+        openslo_sli_error_rate_5m has produced no sample for the last 10m.
+        
+        Common causes:
+          - service_name in the SLO spec does not match what the OpenTelemetry
+            collector's service.name resource attribute actually emits.
+          - le="..." in a histogram bucket query references a boundary that the
+            trace-span-metrics connector does not export.
+          - span_name="..." filter matches no real spans.
+        
+        Fix the selector in examples/oteldemo/specs/<file>.yaml and re-run
+        `cd examples/oteldemo && make generate && make sync`.
+      summary: "opensloctl: SLI metric missing for {{ $labels.openslo_slo_name }}"
+    expr: "openslo_slo_metric_missing == 1"
+    for: "10m"
+    labels:
+      openslo_alert_severity: "page"
+      openslo_notification_target: "engineers"

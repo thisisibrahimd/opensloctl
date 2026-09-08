@@ -1,0 +1,62 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: ad-latency
+  displayName: Ad Service Latency
+  labels:
+    chaos_flag: adServiceHighCpu
+    service: ad
+spec:
+  service: ad
+  description: "95% of `GET /api/data` ad fetches should complete under 2s, measured as the ratio of `le=\"2000\"` classic bucket counts to `_calls_total` on frontend HTTP SERVER (target 0.95; trips on `adHighCpu`, `adManualGc`, and `productCatalogFailure` cascade)."
+  indicator:
+    metadata:
+      name: ad-latency-sli
+    spec:
+      ratioMetric:
+        counter: true
+        good:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: |
+                sum(
+                  rate(
+                    traces_span_metrics_duration_milliseconds_bucket{
+                      service_name="frontend",
+                      span_kind="SPAN_KIND_SERVER",
+                      span_name="GET /api/data",
+                      le="2000"
+                    }[{{.Window}}]
+                  )
+                )
+        total:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: |
+                sum(
+                  rate(
+                    traces_span_metrics_calls_total{
+                      service_name="frontend",
+                      span_kind="SPAN_KIND_SERVER",
+                      span_name="GET /api/data"
+                    }[{{.Window}}]
+                  )
+                )
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  budgetingMethod: Occurrences
+  objectives:
+    - displayName: 99% of GET /api/data ad fetches under 2s
+      target: 0.99
+  alertPolicies:
+    - alertPolicyRef: burnrate-page-fast-5m-policy
+    - alertPolicyRef: burnrate-page-fast-1h-policy
+    - alertPolicyRef: burnrate-page-slow-30m-policy
+    - alertPolicyRef: burnrate-page-slow-6h-policy
+    - alertPolicyRef: burnrate-ticket-fast-2h-policy
+    - alertPolicyRef: burnrate-ticket-fast-1d-policy
+    - alertPolicyRef: burnrate-ticket-slow-6h-policy
+    - alertPolicyRef: burnrate-ticket-slow-3d-policy

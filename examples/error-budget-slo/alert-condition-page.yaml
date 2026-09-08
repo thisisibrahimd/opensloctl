@@ -6,7 +6,7 @@ spec:
   severity: page
   description: Page when checkout error budget burns fast
   condition:
-    kind: burnrate
+    kind: burn-rate
     op: gte
     threshold: 14.4
     lookbackWindow: 5m

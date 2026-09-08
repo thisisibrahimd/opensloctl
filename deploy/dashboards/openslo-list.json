@@ -1,0 +1,336 @@
+{
+   "description": "All SLOs loaded by opensloctl. Click any row to drill into the per-SLO detail dashboard.",
+   "panels": [
+      {
+         "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "align": "left",
+                  "cellOptions": {
+                     "type": "auto"
+                  }
+               }
+            },
+            "overrides": [
+               {
+                  "matcher": {
+                     "id": "byName",
+                     "options": "Value #StatusQ"
+                  },
+                  "properties": [
+                     {
+                        "id": "displayName",
+                        "value": "Status"
+                     },
+                     {
+                        "id": "mappings",
+                        "value": [
+                           {
+                              "options": {
+                                 "0": {
+                                    "color": "green",
+                                    "index": 0,
+                                    "text": "Healthy",
+                                    "value": "0"
+                                 },
+                                 "1": {
+                                    "color": "yellow",
+                                    "index": 1,
+                                    "text": "Burning",
+                                    "value": "1"
+                                 },
+                                 "2": {
+                                    "color": "orange",
+                                    "index": 2,
+                                    "text": "Critical",
+                                    "value": "2"
+                                 },
+                                 "3": {
+                                    "color": "red",
+                                    "index": 3,
+                                    "text": "Breached",
+                                    "value": "3"
+                                 }
+                              },
+                              "type": "value"
+                           }
+                        ]
+                     },
+                     {
+                        "id": "custom.cellOptions",
+                        "value": {
+                           "applyToRow": false,
+                           "mode": "basic",
+                           "type": "color-background"
+                        }
+                     },
+                     {
+                        "id": "thresholds",
+                        "value": {
+                           "mode": "absolute",
+                           "steps": [
+                              {
+                                 "color": "red",
+                                 "value": null
+                              },
+                              {
+                                 "color": "green",
+                                 "value": 0
+                              },
+                              {
+                                 "color": "yellow",
+                                 "value": 1
+                              },
+                              {
+                                 "color": "orange",
+                                 "value": 2
+                              },
+                              {
+                                 "color": "red",
+                                 "value": 3
+                              }
+                           ]
+                        }
+                     }
+                  ]
+               },
+               {
+                  "matcher": {
+                     "id": "byName",
+                     "options": "Value #ObjectiveQ"
+                  },
+                  "properties": [
+                     {
+                        "id": "displayName",
+                        "value": "Objective %"
+                     },
+                     {
+                        "id": "unit",
+                        "value": "percent"
+                     },
+                     {
+                        "id": "decimals",
+                        "value": 2
+                     }
+                  ]
+               },
+               {
+                  "matcher": {
+                     "id": "byName",
+                     "options": "Value #PeriodSLIQ"
+                  },
+                  "properties": [
+                     {
+                        "id": "displayName",
+                        "value": "Period SLI"
+                     },
+                     {
+                        "id": "unit",
+                        "value": "percent"
+                     },
+                     {
+                        "id": "decimals",
+                        "value": 2
+                     }
+                  ]
+               },
+               {
+                  "matcher": {
+                     "id": "byName",
+                     "options": "Value #BudgetQ"
+                  },
+                  "properties": [
+                     {
+                        "id": "displayName",
+                        "value": "Budget Left %"
+                     },
+                     {
+                        "id": "unit",
+                        "value": "percent"
+                     },
+                     {
+                        "id": "custom.cellOptions",
+                        "value": {
+                           "type": "color-background"
+                        }
+                     },
+                     {
+                        "id": "thresholds",
+                        "value": {
+                           "mode": "absolute",
+                           "steps": [
+                              {
+                                 "color": "red",
+                                 "value": null
+                              },
+                              {
+                                 "color": "red",
+                                 "value": 0
+                              },
+                              {
+                                 "color": "yellow",
+                                 "value": 15
+                              },
+                              {
+                                 "color": "green",
+                                 "value": 50
+                              }
+                           ]
+                        }
+                     },
+                     {
+                        "id": "decimals",
+                        "value": 2
+                     }
+                  ]
+               },
+               {
+                  "matcher": {
+                     "id": "byName",
+                     "options": "Time"
+                  },
+                  "properties": [
+                     {
+                        "id": "custom.hidden",
+                        "value": true
+                     }
+                  ]
+               }
+            ]
+         },
+         "gridPos": {
+            "h": 24,
+            "w": 24,
+            "x": 0,
+            "y": 0
+         },
+         "id": 1,
+         "options": {
+            "showHeader": true,
+            "sortBy": [
+               {
+                  "desc": false,
+                  "displayName": "SLO name"
+               }
+            ]
+         },
+         "pluginVersion": "v13.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_status{openslo_slo_name=~\"$slo\"}",
+               "format": "table",
+               "instant": true,
+               "refId": "StatusQ"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_objective{openslo_slo_name=~\"$slo\"} * 100",
+               "format": "table",
+               "instant": true,
+               "refId": "ObjectiveQ"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "(1 - openslo_sli_error_rate_30d{openslo_slo_name=~\"$slo\"}) * 100",
+               "format": "table",
+               "instant": true,
+               "refId": "PeriodSLIQ"
+            },
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "${datasource}"
+               },
+               "expr": "openslo_slo_period_error_budget_remaining{openslo_slo_name=~\"$slo\"} * 100",
+               "format": "table",
+               "instant": true,
+               "refId": "BudgetQ"
+            }
+         ],
+         "title": "Service Level Objectives",
+         "transformations": [
+            {
+               "id": "merge",
+               "options": { }
+            },
+            {
+               "id": "organize",
+               "options": {
+                  "includeByName": {
+                     "Value #BudgetQ": true,
+                     "Value #ObjectiveQ": true,
+                     "Value #PeriodSLIQ": true,
+                     "Value #StatusQ": true,
+                     "openslo_slo_name": true
+                  },
+                  "indexByName": {
+                     "Value #BudgetQ": 4,
+                     "Value #ObjectiveQ": 1,
+                     "Value #PeriodSLIQ": 2,
+                     "Value #StatusQ": 3,
+                     "openslo_slo_name": 0
+                  },
+                  "renameByName": {
+                     "openslo_slo_name": "Service Level Objective"
+                  }
+               }
+            }
+         ],
+         "type": "table"
+      }
+   ],
+   "refresh": "30s",
+   "schemaVersion": 39,
+   "tags": [
+      "openslo"
+   ],
+   "templating": {
+      "list": [
+         {
+            "allowCustomValue": false,
+            "includeAll": false,
+            "label": "datasource",
+            "multi": false,
+            "name": "datasource",
+            "pluginId": "prometheus",
+            "query": "prometheus",
+            "refresh": 1,
+            "type": "datasource"
+         },
+         {
+            "allowCustomValue": false,
+            "datasource": {
+               "type": "prometheus",
+               "uid": "${datasource}"
+            },
+            "includeAll": true,
+            "multi": true,
+            "name": "slo",
+            "query": "label_values(openslo_slo_info, openslo_slo_name)",
+            "refresh": 2,
+            "type": "query"
+         }
+      ]
+   },
+   "time": {
+      "from": "now-7d",
+      "to": "now"
+   },
+   "timezone": "utc",
+   "title": "OpenSLO - Manage SLOs",
+   "uid": "openslo-list"
+}

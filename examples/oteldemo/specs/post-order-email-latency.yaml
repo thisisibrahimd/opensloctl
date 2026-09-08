@@ -1,0 +1,62 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: post-order-email-latency
+  displayName: Post-Order Email Latency
+  labels:
+    chaos_flag: emailMemoryLeak
+    service: email
+spec:
+  service: email
+  description: "95% of order-confirmation email posts should complete under 30s, measured as the ratio of `le=\"30000\"` classic bucket counts to `_calls_total` on email SPAN_KIND_SERVER (target 0.95; trips on `emailMemoryLeak`)."
+  indicator:
+    metadata:
+      name: post-order-email-latency-sli
+    spec:
+      ratioMetric:
+        counter: true
+        good:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: |
+                sum(
+                  rate(
+                    traces_span_metrics_duration_milliseconds_bucket{
+                      service_name="email",
+                      span_kind="SPAN_KIND_SERVER",
+                      span_name=~"POST /send_order_confirmation",
+                      le="30000"
+                    }[{{.Window}}]
+                  )
+                )
+        total:
+          metricSource:
+            type: Prometheus
+            spec:
+              query: |
+                sum(
+                  rate(
+                    traces_span_metrics_calls_total{
+                      service_name="email",
+                      span_kind="SPAN_KIND_SERVER",
+                      span_name=~"POST /send_order_confirmation"
+                    }[{{.Window}}]
+                  )
+                )
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+  budgetingMethod: Occurrences
+  objectives:
+    - displayName: 95% of POST /send_order_confirmation under 30s
+      target: 0.95
+  alertPolicies:
+    - alertPolicyRef: burnrate-page-fast-5m-policy
+    - alertPolicyRef: burnrate-page-fast-1h-policy
+    - alertPolicyRef: burnrate-page-slow-30m-policy
+    - alertPolicyRef: burnrate-page-slow-6h-policy
+    - alertPolicyRef: burnrate-ticket-fast-2h-policy
+    - alertPolicyRef: burnrate-ticket-fast-1d-policy
+    - alertPolicyRef: burnrate-ticket-slow-6h-policy
+    - alertPolicyRef: burnrate-ticket-slow-3d-policy
