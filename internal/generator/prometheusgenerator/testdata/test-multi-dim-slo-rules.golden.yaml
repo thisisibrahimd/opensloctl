@@ -190,21 +190,21 @@ groups:
     - record: openslo_slo_status_unlabeled
       expr: |
         (
-          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= 14.4)
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= bool 14.4)
           * 3
         )
         or
         (
-          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= 6)
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= bool 6)
           and
-          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} <  14.4)
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} <  bool 14.4)
           * 2
         )
         or
         (
-          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= 1)
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} >= bool 1)
           and
-          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} <  6)
+          (openslo_slo_current_burn_rate_unlabeled{openslo_slo_name="test-multi-dim-slo", openslo_spec_version="openslo/v1"} <  bool 6)
           * 1
         )
       labels:

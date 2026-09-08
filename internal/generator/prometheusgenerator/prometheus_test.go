@@ -2,6 +2,7 @@ package prometheusgenerator
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	v1 "github.com/OpenSLO/go-sdk/pkg/openslo/v1"
@@ -85,6 +86,21 @@ func TestGenerate_Golden(t *testing.T) {
 				{file: "tiered-alerts.yaml", output: ""},
 			},
 			goldenPick: "test-tiered-slo-rules.yaml",
+		},
+		{
+			name: "multi-dim SLI emits _unlabeled base + label_join post-process rules",
+			// multi-dim-slo.yaml enables the IsMulti template branch via
+			// both multi-dimensional-sli.openslo.com annotations on
+			// metadata.annotations. Verifies that base recordings get the
+			// _unlabeled suffix and that the post-process block emits
+			// label_join rules that pivot on MultiDimensionalLabel.
+			// multi-dim-service.yaml supplies the Service that the SLO
+			// references (the SDK rejects a blank spec.service).
+			inputs: []inputEntry{
+				{file: "multi-dim-slo.yaml", output: "test-multi-dim-slo-rules.yaml"},
+				{file: "multi-dim-service.yaml", output: ""},
+			},
+			goldenPick: "test-multi-dim-slo-rules.yaml",
 		},
 	}
 
@@ -202,6 +218,122 @@ func TestObjectiveFloat(t *testing.T) {
 			t.Parallel()
 
 			assert.Equal(t, tt.want, objectiveFloat(tt.obj))
+		})
+	}
+}
+
+// TestStatusRuleUsesBoolModifier is a regression that locks in the
+// Prom 3.x-compatible query shape for the status recording rule.
+//
+// Background: comparison operators between an instant vector and a
+// scalar are filters by default - they preserve the LHS value and
+// drop series that don't match. Without the `bool` modifier,
+// `(burn_rate >= 14.4) * 3` multiplies the raw burn rate (a float
+// like 57.3) instead of returning 0 or 3, so the status gauge
+// emits the wrong values and the dashboard's 0/1/2/3 → Healthy/
+// Burning/Critical/Breached mapping never matches.
+//
+// The `bool` modifier has been supported since Prometheus 0.19.0,
+// so writing rules works on every Prometheus version in practical
+// use. We regression-test the rule every generator produces so a
+// future template refactor can't silently regress this.
+func TestStatusRuleUsesBoolModifier(t *testing.T) {
+	t.Parallel()
+
+// Each row declares a spec fixture set that produces at least
+				// one SLO with a generated status recording rule. The
+				// threshold defaults (warning=1, critical=6, breached=14.4) come
+				// from specstore's ParseStatusThreshold fallback, so fixtures
+				// don't need explicit threshold.status.openslo.com/* annotations.
+				cases := []struct {
+					name  string
+					paths []string
+				}{
+					{
+						name:  "multiline SLO",
+						paths: []string{"testdata/multiline-slo.yaml"},
+					},
+					{
+						name:  "multi-dim SLO",
+						paths: []string{"testdata/multi-dim-service.yaml", "testdata/multi-dim-slo.yaml"},
+					},
+					{
+						name:  "tiered SLO",
+						paths: []string{"testdata/tiered-alerts.yaml", "testdata/tiered-slo.yaml"},
+					},
+				}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			specs, err := specstore.GetSpecs(tc.paths, false)
+			require.NoError(t, err)
+
+			gen := NewPrometheusGenerator(specs).(*PrometheusGenerator)
+			files, err := gen.createGeneratedFiles()
+			require.NoError(t, err)
+
+			require.NotEmpty(t, files, "no generated files produced - spec fixtures probably missing")
+
+			var statusRuleSeen int
+			for _, f := range files {
+				body := string(f.Data)
+
+				// The status block only appears when StatusThresholds
+				// are populated. Skip files without it.
+				start := strings.Index(body, "- name: openslo-status-recordings-")
+				if start < 0 {
+					continue
+				}
+				rel := strings.Index(body[start:], "\n  - name: openslo-")
+				bodyFromStart := body[start:]
+				// Find the closest `  - name:` that follows the
+				// `- name: openslo-status-recordings-` header. If
+				// there's no next group, the status block extends to
+				// the end of the body.
+				status := bodyFromStart
+				if rel >= 0 {
+					status = bodyFromStart[:rel]
+				}
+
+				// Every comparison inside the status block must use
+				// the `bool` modifier - 3 `>= bool` (Warning, Critical,
+				// Breached) and 2 `<  bool` (Breached, Critical).
+				require.Equalf(t, 3, strings.Count(status, ">= bool"),
+					"expected 3 '>= bool' in status block; got %d in %s",
+					strings.Count(status, ">= bool"), f.Path)
+				require.Equalf(t, 2, strings.Count(status, "<  bool"),
+					"expected 2 '<  bool' in status block; got %d in %s",
+					strings.Count(status, "<  bool"), f.Path)
+
+				// Highest tier (Breached) must multiply by 3, mid
+				// (Critical) by 2, lowest (Warning) by 1 - those are
+				// the integer status codes the dashboard maps to text.
+				require.Contains(t, status, "* 3")
+				require.Contains(t, status, "* 2")
+				require.Contains(t, status, "* 1")
+
+				// Sanity guard: no `bool` inside the alert block.
+				// Alerts use filter semantics, not coerced 0/1.
+				if alertStart := strings.Index(body, "- name: openslo-alerts-"); alertStart > 0 {
+					rel := strings.Index(body[alertStart:], "\n  - name: openslo-")
+					alertEnd := len(body)
+					if rel >= 0 {
+						alertEnd = rel + alertStart
+					}
+					alertBlock := body[alertStart:alertEnd]
+					require.NotContainsf(t, alertBlock, ">= bool",
+						"alert block must keep filter semantics (no bool modifier); found in %s", f.Path)
+					require.NotContainsf(t, alertBlock, "<  bool",
+						"alert block must keep filter semantics (no bool modifier); found in %s", f.Path)
+				}
+
+				statusRuleSeen++
+			}
+
+			require.GreaterOrEqualf(t, statusRuleSeen, 1,
+				"no generation produced a status recording rule - specstore fallback thresholds may be broken")
 		})
 	}
 }

@@ -151,21 +151,21 @@ groups:
     - record: openslo_slo_status{{ if $.IsMulti }}_unlabeled{{end}}
       expr: |
         (
-          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} >= {{ .StatusThresholds.Breached }})
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} >= bool {{ .StatusThresholds.Breached }})
           * 3
         )
         or
         (
-          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} >= {{ .StatusThresholds.Critical }})
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} >= bool {{ .StatusThresholds.Critical }})
           and
-          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} <  {{ .StatusThresholds.Breached }})
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} <  bool {{ .StatusThresholds.Breached }})
           * 2
         )
         or
         (
-          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} >= {{ .StatusThresholds.Warning }})
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} >= bool {{ .StatusThresholds.Warning }})
           and
-          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} <  {{ .StatusThresholds.Critical }})
+          (openslo_slo_current_burn_rate{{ if $.IsMulti }}_unlabeled{{end}}{openslo_slo_name="{{ .SloName }}", openslo_spec_version="{{ .OpensloVersion }}"} <  bool {{ .StatusThresholds.Critical }})
           * 1
         )
       labels:
