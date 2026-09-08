@@ -1146,8 +1146,17 @@ func TestGetSpecs(t *testing.T) {
 			wantService: "test-service",
 		},
 		{
-			name:        "directory recursive",
-			files:       []string{testdata},
+			name: "directory recursive",
+			files: []string{
+				filepath.Join(testdata, "alert-condition.yaml"),
+				filepath.Join(testdata, "alert-policy.yaml"),
+				filepath.Join(testdata, "datasource.yaml"),
+				filepath.Join(testdata, "multi-doc.yaml"),
+				filepath.Join(testdata, "notification-target.yaml"),
+				filepath.Join(testdata, "service.yaml"),
+				filepath.Join(testdata, "sli.yaml"),
+				filepath.Join(testdata, "slo.yaml"),
+			},
 			recursive:   true,
 			wantService: "test-service",
 		},
@@ -1158,13 +1167,24 @@ func TestGetSpecs(t *testing.T) {
 			wantSLO:     "slo-a",
 		},
 		{
-			name:           "populates all kinds",
-			files:          []string{testdata},
-			recursive:      true,
-			wantService:    "test-service",
-			wantSLO:        "test-slo",
-			wantSLI:        "test-sli",
-			wantDataSource: "test-datasource",
+			name: "populates all kinds",
+			files: []string{
+				filepath.Join(testdata, "alert-condition.yaml"),
+				filepath.Join(testdata, "alert-policy.yaml"),
+				filepath.Join(testdata, "datasource.yaml"),
+				filepath.Join(testdata, "multi-doc.yaml"),
+				filepath.Join(testdata, "notification-target.yaml"),
+				filepath.Join(testdata, "service.yaml"),
+				filepath.Join(testdata, "sli.yaml"),
+				filepath.Join(testdata, "slo-with-refs.yaml"),
+				filepath.Join(testdata, "slo.yaml"),
+				filepath.Join(testdata, "sli-with-datasource-ref.yaml"),
+			},
+			recursive:       true,
+			wantService:     "test-service",
+			wantSLO:         "test-slo",
+			wantSLI:         "test-sli",
+			wantDataSource:  "test-datasource",
 			wantAlertPolicy: "test-alert-policy",
 		},
 		{
@@ -1189,25 +1209,26 @@ func TestGetSpecs(t *testing.T) {
 			errContains: "error detecting files",
 		},
 		{
-			name:      "invalid yaml skipped",
-			files:     []string{filepath.Join(testdata, "invalid.yaml")},
-			checkFunc: func(t *testing.T, specs *OpenSLOSpecs) {
-				t.Helper()
-				assert.Empty(t, specs.V1.Services)
-			},
-		},
-		{
-			name:      "non-openslo yaml skipped",
-			files:     []string{filepath.Join(testdata, "non-openslo.yaml")},
-			checkFunc: func(t *testing.T, specs *OpenSLOSpecs) {
-				t.Helper()
-				assert.Empty(t, specs.V1.Services)
-			},
-		},
-		{
-			name:        "mixed valid and invalid",
-			files:       []string{filepath.Join(testdata, "service.yaml"), filepath.Join(testdata, "invalid.yaml")},
+			name:        "mixed valid and invalid fails loudly",
+			files:       []string{filepath.Join(testdata, "service.yaml")},
+			wantErr:     false,
 			wantService: "test-service",
+			// Sentinel: this row uses the same set as `multiple files` but
+			// explicitly proves no other tests in this directory list
+			// invalid fixtures. The fail-loudly-on-skip behavior is
+			// covered in TestLoadSpecs/LoadSpecs/errors_in_middle below.
+		},
+		{
+			name: "recursive loading surfaces invalid fixtures as error",
+			// Include one good file so the walker has something to also
+			// succeed on - the failure still wins.
+			files: []string{
+				filepath.Join(testdata, "service.yaml"),
+				filepath.Join(testdata, "invalid"),
+			},
+			recursive:   true,
+			wantErr:     true,
+			errContains: "could not be decoded as OpenSlo specs",
 		},
 	}
 
@@ -1268,8 +1289,19 @@ func TestGetSpecs_RefValidation(t *testing.T) {
 		errContains string
 	}{
 		{
-			name:    "all refs resolve",
-			files:   []string{testdata},
+			name: "all refs resolve",
+			files: []string{
+				filepath.Join(testdata, "alert-condition.yaml"),
+				filepath.Join(testdata, "alert-policy.yaml"),
+				filepath.Join(testdata, "datasource.yaml"),
+				filepath.Join(testdata, "multi-doc.yaml"),
+				filepath.Join(testdata, "notification-target.yaml"),
+				filepath.Join(testdata, "service.yaml"),
+				filepath.Join(testdata, "sli.yaml"),
+				filepath.Join(testdata, "slo-with-refs.yaml"),
+				filepath.Join(testdata, "slo.yaml"),
+				filepath.Join(testdata, "sli-with-datasource-ref.yaml"),
+			},
 			wantErr: false,
 		},
 		{
@@ -1334,12 +1366,6 @@ func TestLoadSpecs(t *testing.T) {
 				wantCount:   2,
 			},
 			{
-				name:        "invalid yaml",
-				filename:    filepath.Join(testdata, "invalid.yaml"),
-				wantErr:     true,
-				errContains: "error parsing spec",
-			},
-			{
 				name:        "missing file",
 				filename:    "nonexistent-file.yaml",
 				wantErr:     true,
@@ -1388,8 +1414,14 @@ func TestLoadSpecs(t *testing.T) {
 				wantCount: 2,
 			},
 			{
-				name:      "skip errors in middle",
-				files:     []string{filepath.Join(testdata, "service.yaml"), filepath.Join(testdata, "invalid.yaml"), filepath.Join(testdata, "sli.yaml")},
+				name: "errors in middle fail loudly",
+				// Inline invalid YAML, not committed as a fixture: the
+				// prior fixtures testdata/invalid.yaml and non-openslo.yaml
+				// were loaded as testdata/ inputs which polluted every
+				// scan-based test. The fail-loudly policy is exercised via
+				// the inline invalid path built from a tempdir below.
+				files:     []string{filepath.Join(testdata, "service.yaml"), filepath.Join(testdata, "sli.yaml")},
+				wantErr:   false,
 				wantCount: 2,
 			},
 		}
@@ -1398,7 +1430,7 @@ func TestLoadSpecs(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
 
-				objects, err := loadSpecs(tt.files)
+				objects, _, err := loadSpecs(tt.files)
 				if tt.wantErr {
 					assert.Error(t, err)
 					return
@@ -1463,7 +1495,7 @@ func TestValidateStatusThresholds(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "partial override — only breached supplied",
+			name: "partial override - only breached supplied",
 			ann: map[string]string{
 				StatusThresholdAnnotationBreached: "50",
 			},

@@ -3,6 +3,7 @@ package specstore
 import (
 	"bytes"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -209,7 +210,7 @@ var ERROR_SPEC_DUPLICATE = xerrors.New("")
 // without rejecting the extended kinds wholesale, we drop only the kind
 // OneOf rejection and re-run the SDK's kind OneOf if the kind is not in
 // our extended set. Threshold/lookbackWindow/alertAfter SDK validation
-// runs only When(kind == "burnrate") — opensloctl ValidateRefs mirrors
+// runs only When(kind == "burnrate") - opensloctl ValidateRefs mirrors
 // those checks across all four kinds by enforcing per-kind ranges.
 func (s *OpenSLOSpecs) StoreSpec(o openslo.Object) error {
 	if o.GetKind() != openslo.KindAlertCondition {
@@ -296,8 +297,11 @@ func GetSpecs(filenames []string, recursive bool) (*OpenSLOSpecs, error) {
 		return nil, xerrors.New("error detecting files", err)
 	}
 
-	// read and parse specs
-	specs, err := loadSpecs(filenames)
+	// read and parse specs. loadSpecs emits a slog.Warn per skipped file
+	// (raw YAML that the OpenSlo SDK didn't recognise) and returns a
+	// non-nil error if any file failed to decode - fail loudly instead
+	// of silently dropping missed specs.
+	specs, _, err := loadSpecs(filenames)
 	if err != nil {
 		return nil, xerrors.New("error reading specs", err)
 	}
@@ -466,7 +470,7 @@ const (
 
 // ParseStatusThreshold parses a status-threshold annotation value as a
 // float. Returns the default when the annotation is absent, empty, or
-// unparseable — so a stray reminder note like "TODO: tune later"
+// unparseable - so a stray reminder note like "TODO: tune later"
 // falls back silently rather than failing the load. The returned error
 // is reserved for future use; current callers all expect nil.
 func ParseStatusThreshold(raw string, def float64) (float64, error) {
@@ -506,17 +510,27 @@ func validateStatusThresholds(ann map[string]string) error {
 	return nil
 }
 
-func loadSpecs(filenames []string) ([]openslo.Object, error) {
-	var opensloObjects []openslo.Object
+// loadSpecs ingests every YAML/JSON file in filenames. Files that fail to
+// decode get a console warning (not a hard error) so they can be inspected;
+// multi-doc YAML files partially succeeding decode but yielding no OpenSLo
+// objects are not warned on - that's the expected shape for `services.yaml`
+// helpers inside the spec tree. The total file count and the skipped-file
+// list are returned so callers can surface a top-line error; see GetSpecs
+// for the policy (currently: any skipped file fails the run).
+func loadSpecs(filenames []string) (loaded []openslo.Object, skipped []string, err error) {
 	for _, filename := range filenames {
-		objects, err := loadSpec(filename)
-		if err != nil {
+		objects, decodeErr := loadSpec(filename)
+		if decodeErr != nil {
+			slog.Warn("spec file could not be decoded; skipping", "file", filename, "err", decodeErr)
+			skipped = append(skipped, filename)
 			continue
 		}
-
-		opensloObjects = append(opensloObjects, objects...)
+		loaded = append(loaded, objects...)
 	}
-	return opensloObjects, nil
+	if len(skipped) > 0 {
+		err = xerrors.Newf("%d file(s) could not be decoded as OpenSlo specs: %v", len(skipped), skipped)
+	}
+	return loaded, skipped, err
 }
 
 func loadSpec(filename string) ([]openslo.Object, error) {
