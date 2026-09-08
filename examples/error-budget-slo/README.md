@@ -1,4 +1,4 @@
-# `error-budget-slo` — Checkout success rate with single-window burn-rate alerting
+# `error-budget-slo` - Checkout success rate with single-window burn-rate alerting
 
 Sibling of [`api-latency-slo`](../api-latency-slo/README.md), but with a ratioMetric SLI (good/total requests) instead of a thresholdMetric (latency histogram). Both examples exercise the [`burn-rate`](../README.md#burn-rate--sre-%C2%A74) alerting strategy.
 
@@ -67,4 +67,4 @@ The generator renders `checkout-slo-rules.yaml` with the SLO info recordings, th
 
 ## When to use this kind
 
-Same as `api-latency-slo`: `burn-rate` is the simplest burn-based alert. The choice of SLI source (ratioMetric here vs thresholdMetric in api-latency-slo) doesn't change the alert strategy — pick whichever fits your data.
+Same as `api-latency-slo`: `burn-rate` is the simplest burn-based alert. The choice of SLI source (ratioMetric here vs thresholdMetric in api-latency-slo) doesn't change the alert strategy - pick whichever fits your data.

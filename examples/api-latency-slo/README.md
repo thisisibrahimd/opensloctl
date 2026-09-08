@@ -1,10 +1,10 @@
-# `api-latency-slo` — API latency with single-window burn-rate alerting
+# `api-latency-slo` - API latency with single-window burn-rate alerting
 
 Demonstrates the [`burn-rate`](../README.md#burn-rate--sre-%C2%A74) alerting strategy (SRE Workbook § 4). One burn-rate condition per severity, no tiering.
 
 ## Strategy
 
-The simplest meaningful burn-rate alert. Each severity has a single burn-rate multiplier over a single lookback window. No OR-ed windows, no AND-ed tiers — just one threshold and one window per severity.
+The simplest meaningful burn-rate alert. Each severity has a single burn-rate multiplier over a single lookback window. No OR-ed windows, no AND-ed tiers - just one threshold and one window per severity.
 
 ## Files
 
@@ -82,4 +82,4 @@ ls output/
 
 ## When to use this kind
 
-`burn-rate` is the simplest burn-based alert — useful when you only want one threshold per severity and don't need the smoothing that paired short+long windows provide. For better noise immunity, upgrade to [`multi-window-multi-burn-rate`](../README.md#multi-window-multi-burn-rate--sre-%C2%A76-recommended).
+`burn-rate` is the simplest burn-based alert - useful when you only want one threshold per severity and don't need the smoothing that paired short+long windows provide. For better noise immunity, upgrade to [`multi-window-multi-burn-rate`](../README.md#multi-window-multi-burn-rate--sre-%C2%A76-recommended).

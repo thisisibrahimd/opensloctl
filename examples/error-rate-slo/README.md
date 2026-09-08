@@ -1,10 +1,10 @@
-# `error-rate-slo` — Checkout availability with raw error-rate alerting
+# `error-rate-slo` - Checkout availability with raw error-rate alerting
 
 Demonstrates the [`error-rate`](../README.md#error-rate--sre-%C2%A7%C2%A7-13) alerting strategy. The simplest possible setup: one `error-rate` condition per severity, comparing the SLI error rate directly to an absolute threshold.
 
 ## Strategy
 
-From the SRE Workbook §§ 1–3, the "target error rate" / "increased alert window" / "alert on incrementing duration" patterns all share the same expression shape — the only differences are:
+From the SRE Workbook §§ 1–3, the "target error rate" / "increased alert window" / "alert on incrementing duration" patterns all share the same expression shape - the only differences are:
 
 1. `lookbackWindow` length (short vs long)
 2. Whether `alertAfter` is set (maps to Prom `for:`)
@@ -90,4 +90,4 @@ ls output/
 
 ## When to use this kind
 
-Pick `error-rate` when you want the simplest possible burn-free alerting setup. The threshold is the **error rate itself**, not a burn multiplier — easy to reason about, but lacks the smoothing that burn rates provide against short bursts.
+Pick `error-rate` when you want the simplest possible burn-free alerting setup. The threshold is the **error rate itself**, not a burn multiplier - easy to reason about, but lacks the smoothing that burn rates provide against short bursts.

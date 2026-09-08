@@ -1,6 +1,6 @@
-# `multi-burn-slo` — Payment availability with multi-burn-rate alerting
+# `multi-burn-slo` - Payment availability with multi-burn-rate alerting
 
-Demonstrates the [`multi-burn-rate`](../README.md#multi-burn-rate--sre-%C2%A75) alerting strategy (SRE Workbook § 5). Multiple burn rate windows OR-ed together per severity — no short/long AND pairing.
+Demonstrates the [`multi-burn-rate`](../README.md#multi-burn-rate--sre-%C2%A75) alerting strategy (SRE Workbook § 5). Multiple burn rate windows OR-ed together per severity - no short/long AND pairing.
 
 ## Strategy
 
@@ -82,7 +82,7 @@ The generator renders a single file `payment-availability-rules.yaml` containing
     severity: ticket
 ```
 
-The same name across severities — `severity` is the discriminator — matches the way Prometheus alerts are typically structured.
+The same name across severities - `severity` is the discriminator - matches the way Prometheus alerts are typically structured.
 
 ## Run
 
