@@ -185,7 +185,7 @@ groups:
   - name: openslo-alerts-{{ .SloName }}
     rules:
     {{- range $severity, $alertData := .AlertGroups }}
-    - alert: {{ $alertData.SloNamePascal }}{{ $alertData.KindPascal }}
+    - alert: {{ $alertData.SloNamePascal }}{{ $alertData.KindPascal }}{{ $severity | title }}
       expr: |-
         {{- range $ti, $tier := $alertData.Tiers }}
         {{- if $ti }}

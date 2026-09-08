@@ -249,7 +249,7 @@ groups:
         openslo_service_name: test-svc
   - name: openslo-alerts-test-tiered-slo
     rules:
-    - alert: TestTieredSloMultiWindowMultiBurnRate
+    - alert: TestTieredSloMultiWindowMultiBurnRatePage
       expr: |-
         (
         openslo_sli_error_rate_5m{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 14.400000
@@ -270,7 +270,7 @@ groups:
       annotations:
         summary: "Page multi-window multi-burn rate alert for SLO test-tiered-slo"
         description: "Threshold 14.4x and 6.0x over 5m and 1h and 30m and 6h"
-    - alert: TestTieredSloMultiWindowMultiBurnRate
+    - alert: TestTieredSloMultiWindowMultiBurnRateTicket
       expr: |-
         (
         openslo_sli_error_rate_2h{openslo_slo_name="test-tiered-slo"} / (1 - openslo_slo_objective{openslo_slo_name="test-tiered-slo"}) >= 3.000000
