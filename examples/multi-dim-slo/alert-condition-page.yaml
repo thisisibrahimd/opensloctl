@@ -1,0 +1,13 @@
+apiVersion: openslo/v1
+kind: AlertCondition
+metadata:
+  name: api-latency-page-multi-dim
+spec:
+  severity: page
+  description: Per-service latency budget exceeded at a fast burn rate
+  condition:
+    kind: burn-rate
+    op: gte
+    threshold: 14.4
+    lookbackWindow: 5m
+    alertAfter: 2m

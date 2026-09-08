@@ -1,0 +1,10 @@
+apiVersion: openslo/v1
+kind: AlertPolicy
+metadata:
+  name: api-latency-page-policy
+spec:
+  alertWhenBreaching: true
+  conditions:
+    - conditionRef: api-latency-page-multi-dim
+  notificationTargets:
+    - targetRef: pagerduty

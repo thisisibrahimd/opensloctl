@@ -1,0 +1,11 @@
+apiVersion: openslo/v1
+kind: SLI
+metadata:
+  name: api-gateway-latency-sli
+spec:
+  description: P99 API latency shared across services
+  thresholdMetric:
+    metricSource:
+      type: Prometheus
+      spec:
+        query: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="api-gateway"}[{{.Window}}])) by (le))
