@@ -1,5 +1,6 @@
 REGISTRY_DIR := semconv/registry
 
+# semconv management
 .PHONY: semconv-generate
 semconv-generate:
 	weaver registry generate --v2 --registry $(REGISTRY_DIR) --templates ./semconv/templates/ go ./pkg/semconv/
@@ -21,6 +22,7 @@ semconv-json:
 semconv-diff:
 	weaver registry diff --v2 --registry $(REGISTRY_DIR) --baseline-registry $(REGISTRY_DIR)@$(BASE)
 
+# cli build/test/lint
 .PHONY: build
 build:
 	go build -o opensloctl .
@@ -32,14 +34,6 @@ lint:
 .PHONY: test
 test:
 	go test ./...
-
-.PHONY: generate
-generate:
-	go run . generate -f $(FILE) -o $(OUTPUT)
-
-.PHONY: load
-load:
-	go run . load -f $(FILE)
 
 .PHONY: tidy
 tidy:
