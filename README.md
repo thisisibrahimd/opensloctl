@@ -32,7 +32,7 @@ Install the binary, validate one of the shipped examples, generate rules, push t
 ### Install
 
 ```
-# via mise (pins the version in mise.toml)
+# via mise
 mise use github:thisisibrahimd/opensloctl
 
 # or from source
@@ -633,90 +633,20 @@ make semconv-stats                # show registry statistics
 make semconv-diff BASE=<ref>      # detect breaking changes vs base ref
 ```
 
-### Consuming the registry
-
-If your project also uses OpenTelemetry Weaver, depend on this registry directly. Add it in your `manifest.yaml`:
-
-```yaml
-schema_url: https://your-org.com/schemas/your-app/v1.0.0
-
-dependencies:
-  - schema_url: https://openslo.com/schemas/v1.0.0
-    registry_path: https://github.com/thisisibrahimd/opensloctl.git[semconv/registry]
-```
-
-Then reference the attributes in your own metrics:
-
-```yaml
-metrics:
-  - name: myapp.slo.burn_rate
-    instrument: gauge
-    unit: "1"
-    stability: development
-    brief: Current error budget burn rate.
-    attributes:
-      - ref: openslo.slo.name
-        requirement_level: required
-      - ref: openslo.spec.version
-        requirement_level: required
-```
-
-If you do not use Weaver, the Go constants are available at `github.com/thisisibrahimd/opensloctl/pkg/semconv`:
-
-```go
-import "github.com/thisisibrahimd/opensloctl/pkg/semconv"
-
-meter.Float64ObservableGauge(semconv.METRIC_OPENSLO_SLO_INFO)
-gauge := meter.Float64ObservableGauge(semconv.METRIC_OPENSLO_SLO_STATUS,
-    api.WithDescription("SLO categorical health state"))
-```
-
 ## 9. Development
 
 ### Toolchain
 
-This project uses [mise](https://mise.jdx.dev/) to manage tool versions. `mise.toml` declares `go = "1.26"` (the version releases are built and tested against); `go.mod` declares `go 1.25.5` as the minimum supported version.
+This project uses [mise](https://mise.jdx.dev/) to manage tool versions. You can install development dependencies via ```mise install```.
 
 ```
-# one-time
-mise install
-
 # developer commands
 make build         # go build -o opensloctl .
 make test          # go test ./...
 make lint          # golangci-lint run
 make tidy          # go mod tidy
 
-# generators
-make generate FILE=examples/oteldemo/specs OUTPUT=examples/oteldemo/rules
-make validate FILE=examples/oteldemo/specs
-
 # semconv management
 make semconv-generate
 make semconv-check
-
-# dashboards / integrity rules
-make -C deploy/mixins release          # also pushes JSON to deploy/dashboards; render integrity rules
-
-# snapshot test upkeep
-go test ./internal/generator/prometheusgenerator/... -update
 ```
-
-### Repository layout
-
-| Path | Purpose |
-|---|---|
-| `main.go` -> `cmd.Execute()` | single CLI entrypoint |
-| `pkg/specstore/loader.go` | load YAML via `openslosdk.Decode`, sort into typed structs |
-| `internal/generator/generator.go` | `Generator` interface |
-| `internal/generator/prometheusgenerator/` | template + sprig rendering; emits the unified `<slo>-rules.yaml` |
-| `internal/feature/feature.go` | feature flag handling |
-| `pkg/semconv/semconv_gen.go` | auto-generated, do not edit |
-| `pkg/util/file.go` | recursive YAML/YML file discovery |
-| `semconv/registry/` | OTel Weaver YAML for metrics + attributes |
-| `semconv/templates/go/` | MiniJinja templates for codegen |
-| `examples/<kind>-slo/` | the six spec bundles |
-| `deploy/dashboards/` | repo-root Grafana dashboards (regenerated from `deploy/mixins/`) |
-| `deploy/mixins/` | grafonnet source for the dashboards + integrity rules |
-| `deploy/rules/` | rendered integrity rules (subset of rules CM payload) |
-| `CHANGELOG.md` | per-release change log |
